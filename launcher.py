@@ -156,6 +156,7 @@ class GameManager:
         
         # 初始化页面状态标志
         self._traditional_mode_initialized = False
+        self._dual_mode_initialized = False
     
     def change_page(self, new_page):
         """切换页面"""
@@ -292,18 +293,26 @@ class GameManager:
                     return True
             return True
         
+        # 如果这是第一次进入双人模式或从其他页面返回，重置游戏状态
+        if not hasattr(self, '_dual_mode_initialized') or not self._dual_mode_initialized:
+            self.dual_game_page.reset_game()
+            self._dual_mode_initialized = True
+        
         # 运行双人游戏的一帧
         try:
             result = self.dual_game_page.run_one_frame()
             if result == "quit":
+                self._dual_mode_initialized = False  # 标记需要重新初始化
                 self.change_page(PageState.MAIN_MENU)
                 return True
             elif result == "game_over":
-                # 游戏结束，可以显示结束画面或直接返回主菜单
+                # 游戏结束，标记需要重新初始化
+                self._dual_mode_initialized = False
                 self.change_page(PageState.MAIN_MENU)
                 return True
         except Exception as e:
             print(f"双人游戏运行错误: {e}")
+            self._dual_mode_initialized = False
             self.change_page(PageState.MAIN_MENU)
         
         return True

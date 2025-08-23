@@ -36,6 +36,16 @@ class DualGamePage:
 
         # 调用私有方法创建精灵组
         self.__creat_sprites()
+    
+    def reset_game(self):
+        """重置游戏状态"""
+        # 重置生命和分数
+        self.life1 = 3
+        self.life2 = 3
+        self.score1 = 0
+        self.score2 = 0
+        # 重新创建精灵组
+        self.__creat_sprites()
 
         # 控制游戏暂停开始的按钮
         # self.
@@ -104,7 +114,16 @@ class DualGamePage:
                 return True
                 
             print(event)
-            check_KEY(self.hero1, self.hero2, self.hero3,  self.enemy,
+            # 创建虚拟的hero3对象，避免None错误（双人模式不需要僚机）
+            dummy_hero3 = type('DummyHero', (), {
+                'fire': lambda *args: None, 
+                'moving_right': False, 
+                'moving_left': False, 
+                'moving_up': False, 
+                'moving_down': False,
+                'time_count': 1
+            })()
+            check_KEY(self.hero1, self.hero2, dummy_hero3,  self.enemy,
                       event, self.enemy_group, self.BGM, self.button)
             check_mouse(event, self.button)
 
@@ -121,7 +140,7 @@ class DualGamePage:
     def __check_collide(self):
         '''碰撞检测'''
         # 子弹碰撞敌人
-        if pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True) or pygame.sprite.groupcollide(self.hero3.bullets, self.enemy_group, True, True):
+        if pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True):
             self.score1 += 1
         if pygame.sprite.groupcollide(self.hero2.bullets, self.enemy_group, True, True):
             self.score2 += 1
@@ -132,14 +151,9 @@ class DualGamePage:
         if len(enemys1) > 0 and self.life1 > 0:
             self.life1 -= 1
             if self.life1 == 0:
-
-                # 英雄死亡后，僚机也随之消失
-                self.hero3.rect.x = 1000
-                self.hero3.rect.y = 1000
-                self.hero3.kill()
                 # 英雄死亡后，移除屏幕
                 self.hero1.rect.bottom = 0
-                self.hero1.rect.x = SCREEN_RECT.width
+                self.hero1.rect.x = self.screen_width
                 self.hero1.kill()
 
         enemys2 = pygame.sprite.spritecollide(
@@ -148,15 +162,8 @@ class DualGamePage:
             self.life2 -= 1
             if self.life2 == 0:
                 self.hero2.rect.bottom = 0
-                self.hero2.rect.x = SCREEN_RECT.width
+                self.hero2.rect.x = self.screen_width
                 self.hero2.kill()
-        # 检测僚机和敌机的碰撞
-        enemys3 = pygame.sprite.spritecollide(self.hero3, self.enemy_group, True) 
-        if len(enemys3) > 0 :
-            self.hero3.rect.x = 1000
-            self.hero3.rect.y = 1000
-            self.hero1.wing = 2
-            self.hero3.kill()
 
 
         # 当两个玩家都死亡，游戏结束
@@ -169,7 +176,7 @@ class DualGamePage:
         '''更新精灵组'''
 
         if self.button.pause_game % 2 != 0:
-            for group in [self.back_group, self.hero_group1, self.hero_group2, self.hero_group3, self.hero1.bullets, self.hero2.bullets, self.hero3.bullets, self.enemy_group, self.enemy.bullets,]: 
+            for group in [self.back_group, self.hero_group1, self.hero_group2, self.hero1.bullets, self.hero2.bullets, self.enemy_group, self.enemy.bullets,]: 
                 group.draw(self.screen)
                 self.button.update()
                 # 重新设置按钮位置到左下角
@@ -178,7 +185,7 @@ class DualGamePage:
                 self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
 
         elif self.button.pause_game % 2 == 0:
-            for group in [self.back_group, self.hero_group1, self.hero_group2, self.hero_group3, self.hero1.bullets, self.hero2.bullets, self.hero3.bullets, self.enemy_group, self.enemy.bullets,]:
+            for group in [self.back_group, self.hero_group1, self.hero_group2, self.hero1.bullets, self.hero2.bullets, self.enemy_group, self.enemy.bullets,]:
                 group.draw(self.screen)
                 group.update()
                 self.button.update()
@@ -250,10 +257,4 @@ class DualGamePage:
         self.hero2.rect.y = self.screen_height - 100
         self.hero_group2 = pygame.sprite.Group(self.hero2)
         
-        # 僚机组
-        self.hero3 = Hero('./images/life.png',wing = 1)
-        self.hero3.image = pygame.transform.scale(self.hero3.image,(35,25))
-        # 僚机跟随英雄1，位置稍微偏上
-        self.hero3.rect.centerx = self.hero1.rect.centerx 
-        self.hero3.rect.centery = self.hero1.rect.centery - 35
-        self.hero_group3 = pygame.sprite.Group(self.hero3)
+

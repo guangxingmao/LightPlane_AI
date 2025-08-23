@@ -34,6 +34,14 @@ class TraditionalGamePage:
 
         # 调用私有方法创建精灵组
         self.__creat_sprites()
+    
+    def reset_game(self):
+        """重置游戏状态"""
+        # 重置生命和分数
+        self.life1 = 3
+        self.score1 = 0
+        # 重新创建精灵组
+        self.__creat_sprites()
 
     def start_game(self):
         '''开始游戏'''

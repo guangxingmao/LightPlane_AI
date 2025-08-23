@@ -28,6 +28,14 @@ except ImportError as e:
     print(f"传统模式游戏页面加载失败: {e}")
     TRADITIONAL_GAME_LOADED = False
 
+# 尝试导入彩蛋模式游戏页面
+try:
+    from easter_egg_page import EasterEggPage
+    EASTER_EGG_LOADED = True
+except ImportError as e:
+    print(f"彩蛋模式游戏页面加载失败: {e}")
+    EASTER_EGG_LOADED = False
+
 # 初始化pygame
 pygame.init()
 
@@ -93,6 +101,7 @@ class PageState:
     MAIN_MENU = "main_menu"
     TRADITIONAL_MODE = "traditional_mode"
     DUAL_MODE = "dual_mode"
+    EASTER_EGG_MODE = "easter_egg_mode"
     AI_MODE = "ai_mode"
     CUSTOM_MODE = "custom_mode"
 
@@ -153,10 +162,17 @@ class GameManager:
             self.traditional_game_page = TraditionalGamePage(screen)
         else:
             self.traditional_game_page = None
+            
+        # 初始化彩蛋模式游戏页面
+        if EASTER_EGG_LOADED:
+            self.easter_egg_page = EasterEggPage(screen)
+        else:
+            self.easter_egg_page = None
         
         # 初始化页面状态标志
         self._traditional_mode_initialized = False
         self._dual_mode_initialized = False
+        self._easter_egg_mode_initialized = False
     
     def change_page(self, new_page):
         """切换页面"""
@@ -174,6 +190,8 @@ class GameManager:
                 running = self.handle_dual_mode()
             elif self.current_page == PageState.TRADITIONAL_MODE:
                 running = self.handle_traditional_mode()
+            elif self.current_page == PageState.EASTER_EGG_MODE:
+                running = self.handle_easter_egg_mode()
             elif self.current_page == PageState.AI_MODE:
                 running = self.handle_ai_mode()
             elif self.current_page == PageState.CUSTOM_MODE:
@@ -195,8 +213,9 @@ class GameManager:
         buttons = [
             Button(center_x, 200, button_width, button_height, "Traditional Mode", LIGHT_BLUE, BLUE),
             Button(center_x, 280, button_width, button_height, "Dual Player Mode", GREEN, (0, 200, 0)),
-            Button(center_x, 360, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
-            Button(center_x, 440, button_width, button_height, "Custom Mode", RED, (200, 0, 0))
+            Button(center_x, 360, button_width, button_height, "Easter Egg Mode 🥚", (255, 20, 147), (255, 105, 180)),
+            Button(center_x, 440, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
+            Button(center_x, 520, button_width, button_height, "Custom Mode", RED, (200, 0, 0))
         ]
         
         # 绘制主菜单
@@ -218,9 +237,11 @@ class GameManager:
                         self.change_page(PageState.TRADITIONAL_MODE)
                     elif i == 1:  # 双人模式
                         self.change_page(PageState.DUAL_MODE)
-                    elif i == 2:  # AI模式
+                    elif i == 2:  # 彩蛋模式
+                        self.change_page(PageState.EASTER_EGG_MODE)
+                    elif i == 3:  # AI模式
                         self.change_page(PageState.AI_MODE)
-                    elif i == 3:  # 自定义模式
+                    elif i == 4:  # 自定义模式
                         self.change_page(PageState.CUSTOM_MODE)
         
         return True
@@ -355,6 +376,48 @@ class GameManager:
         except Exception as e:
             print(f"传统模式游戏运行错误: {e}")
             self._traditional_mode_initialized = False
+            self.change_page(PageState.MAIN_MENU)
+        
+        return True
+    
+    def handle_easter_egg_mode(self):
+        """处理彩蛋模式页面"""
+        if not self.easter_egg_page:
+            # 如果彩蛋模式游戏页面未加载，显示错误信息
+            self.draw_background()
+            error_text = safe_render_text(self.info_font, "Easter Egg Game Module Loading Failed", RED)
+            error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(error_text, error_rect)
+            
+            # 处理事件
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.change_page(PageState.MAIN_MENU)
+                    return True
+            return True
+        
+        # 如果这是第一次进入彩蛋模式或从其他页面返回，重置游戏状态
+        if not hasattr(self, '_easter_egg_mode_initialized') or not self._easter_egg_mode_initialized:
+            self.easter_egg_page.reset_game()
+            self._easter_egg_mode_initialized = True
+        
+        # 运行彩蛋模式游戏的一帧
+        try:
+            result = self.easter_egg_page.run_one_frame()
+            if result == "quit":
+                self._easter_egg_mode_initialized = False  # 标记需要重新初始化
+                self.change_page(PageState.MAIN_MENU)
+                return True
+            elif result == "game_over":
+                # 游戏结束，标记需要重新初始化
+                self._easter_egg_mode_initialized = False
+                self.change_page(PageState.MAIN_MENU)
+                return True
+        except Exception as e:
+            print(f"彩蛋模式游戏运行错误: {e}")
+            self._easter_egg_mode_initialized = False
             self.change_page(PageState.MAIN_MENU)
         
         return True

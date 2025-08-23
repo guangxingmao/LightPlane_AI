@@ -172,6 +172,9 @@ class DualGamePage:
             for group in [self.back_group, self.hero_group1, self.hero_group2, self.hero_group3, self.hero1.bullets, self.hero2.bullets, self.hero3.bullets, self.enemy_group, self.enemy.bullets,]: 
                 group.draw(self.screen)
                 self.button.update()
+                # 重新设置按钮位置到左下角
+                self.button.rect.x = 20
+                self.button.rect.bottom = self.screen_height - 20
                 self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
 
         elif self.button.pause_game % 2 == 0:
@@ -179,6 +182,9 @@ class DualGamePage:
                 group.draw(self.screen)
                 group.update()
                 self.button.update()
+                # 重新设置按钮位置到左下角
+                self.button.rect.x = 20
+                self.button.rect.bottom = self.screen_height - 20
                 self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
         
         # 手动更新背景位置以适应新的屏幕尺寸
@@ -233,19 +239,21 @@ class DualGamePage:
 
         # 英雄组
         self.hero1 = Hero('./images/life.png')
-        # 设置英雄1在屏幕中央
-        self.hero1.rect.centerx = self.screen_width // 2
-        self.hero1.rect.centery = self.screen_height - 100
+        # 设置英雄1在左上角
+        self.hero1.rect.x = 50
+        self.hero1.rect.y = 50
         self.hero_group1 = pygame.sprite.Group(self.hero1)
         
         self.hero2 = Hero('./images/life.png',wing = 2)
-        self.hero2.rect.x = self.screen_width // 2 - 100
+        # 设置英雄2在左下角
+        self.hero2.rect.x = 50
         self.hero2.rect.y = self.screen_height - 100
         self.hero_group2 = pygame.sprite.Group(self.hero2)
         
         # 僚机组
         self.hero3 = Hero('./images/life.png',wing = 1)
         self.hero3.image = pygame.transform.scale(self.hero3.image,(35,25))
+        # 僚机跟随英雄1，位置稍微偏上
         self.hero3.rect.centerx = self.hero1.rect.centerx 
         self.hero3.rect.centery = self.hero1.rect.centery - 35
         self.hero_group3 = pygame.sprite.Group(self.hero3)

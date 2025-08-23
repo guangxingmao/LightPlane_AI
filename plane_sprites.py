@@ -3,7 +3,7 @@ import random
 import time
 
 # 定义屏幕常量
-SCREEN_RECT = pygame.Rect(0, 0, 700, 480)
+SCREEN_RECT = pygame.Rect(0, 0, 800, 600)
 # 创建敌机事件常量
 CREAT_ENEMY_EVENT = pygame.USEREVENT
 # 英雄开火常量

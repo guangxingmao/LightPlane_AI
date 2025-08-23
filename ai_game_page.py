@@ -373,7 +373,11 @@ class AIGamePage:
             
             # 处理AI飞机自动射击事件
             if event.type == self.AI_FIRE_EVENT:
-                if self.life2 > 0 and hasattr(self.hero2, 'time_count') and self.hero2.time_count > 0:
+                # 只有在游戏开始且未暂停时才允许AI射击
+                game_started = self.button.count_mouse % 2 != 0
+                game_paused = self.button.pause_game % 2 != 0
+                if (game_started and not game_paused and 
+                    self.life2 > 0 and hasattr(self.hero2, 'time_count') and self.hero2.time_count > 0):
                     self.hero2.fire()
             
             # 处理鼠标事件（暂停按钮和玩家1移动）

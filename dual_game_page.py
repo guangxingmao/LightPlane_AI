@@ -49,10 +49,14 @@ class DualGamePage:
             # 1. 设置刷新帧率
             self.clock.tick(60)
             # 2. 事件监听
-            self.__check_event()
+            should_quit = self.__check_event()
+            if should_quit:
+                return "quit"
 
             # 3. 碰撞检测
-            self.__check_collide()
+            game_over = self.__check_collide()
+            if game_over:
+                return "game_over"
 
             # 4. 更新精灵组
             self.__update_sprites()
@@ -62,10 +66,39 @@ class DualGamePage:
 
             # 5. 更新屏幕显示
             pygame.display.update()
+    
+    def run_one_frame(self):
+        '''运行一帧游戏 - 用于与启动器集成'''
+        # 判断是否有音乐在播放，如果没有，就播放
+        if not pygame.mixer.music.get_busy():
+            self.BGM.play_music()
+        
+        # 事件监听
+        should_quit = self.__check_event()
+        if should_quit:
+            return "quit"
+
+        # 碰撞检测
+        game_over = self.__check_collide()
+        if game_over:
+            return "game_over"
+
+        # 更新精灵组
+        self.__update_sprites()
+
+        # 显示生命和分数
+        self.show_life()
+
+        return "running"
 
     def __check_event(self):
         """事件监听"""
         for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return True
+                
             print(event)
             check_KEY(self.hero1, self.hero2, self.hero3,  self.enemy,
                       event, self.enemy_group, self.BGM, self.button)
@@ -77,6 +110,8 @@ class DualGamePage:
                     (x,y) = pygame.mouse.get_pos()
                     self.hero2.rect.centerx= x
                     self.hero2.rect.centery = y
+        
+        return False
 
 
     def __check_collide(self):
@@ -120,9 +155,11 @@ class DualGamePage:
             self.hero3.kill()
 
 
-        # 当两个玩家都死亡，游戏退出
+        # 当两个玩家都死亡，游戏结束
         if self.life1 == 0 and self.life2 == 0:
-            exit()
+            return True
+        
+        return False
 
     def __update_sprites(self):
         '''更新精灵组'''
@@ -152,7 +189,10 @@ class DualGamePage:
         text2 = 'SOCRE1 :' + str(self.score1)
         text3 = 'LIFE2 :' + str(self.life2)
         text4 = 'SOCRE2 :' + str(self.score2)
-        cur_font = pygame.font.SysFont("宋体", 20)
+        try:
+            cur_font = pygame.font.SysFont(None, 20)
+        except:
+            cur_font = pygame.font.Font(None, 20)
         text_fmt1 = cur_font.render(text1, 1, color)
         text_fmt2 = cur_font.render(text2, 1, color)
         text_fmt3 = cur_font.render(text3, 1, color)

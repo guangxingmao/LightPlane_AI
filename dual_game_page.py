@@ -11,11 +11,15 @@ class DualGamePage:
     """双人游戏页面类"""
     
     def __init__(self, screen):
-       # 创建游戏屏幕
+        # 创建游戏屏幕
         self.screen = screen
+        
+        # 获取屏幕尺寸
+        self.screen_width = screen.get_width()
+        self.screen_height = screen.get_height()
 
         # 设置窗口的标题
-        pygame.display.set_caption('雷霆战机3.0')
+        pygame.display.set_caption('LightPlane Fighter 3.0')
         # 创建游戏时钟
         self.clock = pygame.time.Clock()
         # 生命数量
@@ -176,14 +180,19 @@ class DualGamePage:
                 group.update()
                 self.button.update()
                 self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
+        
+        # 手动更新背景位置以适应新的屏幕尺寸
+        for bg in self.back_group:
+            if bg.rect.x <= -self.screen_width:
+                bg.rect.x = self.screen_width
 
     def show_life(self):
         '''显示字体'''
         pygame.font.init()
         pos1 = (0, 0)
         pos2 = (0, 20)
-        pos3 = (400, 0)
-        pos4 = (400, 20)
+        pos3 = (self.screen_width // 2, 0)
+        pos4 = (self.screen_width // 2, 20)
         color = (0, 0, 0)
         text1 = 'LIFE1 :' + str(self.life1)
         text2 = 'SOCRE1 :' + str(self.score1)
@@ -204,9 +213,19 @@ class DualGamePage:
 
     def __creat_sprites(self):
         '''创建精灵组'''
-        # 背景组
+        # 背景组 - 创建适应屏幕尺寸的背景
         bg1 = Background()
         bg2 = Background(True)
+        
+        # 调整背景图片大小以适应屏幕
+        bg1.image = pygame.transform.scale(bg1.image, (self.screen_width, self.screen_height))
+        bg2.image = pygame.transform.scale(bg2.image, (self.screen_width, self.screen_height))
+        
+        # 重新设置背景位置
+        bg1.rect = bg1.image.get_rect()
+        bg2.rect = bg2.image.get_rect()
+        bg2.rect.x = self.screen_width
+        
         self.back_group = pygame.sprite.Group(bg1, bg2)
         # 敌机组
         self.enemy = Enemy()
@@ -214,11 +233,16 @@ class DualGamePage:
 
         # 英雄组
         self.hero1 = Hero('./images/life.png')
+        # 设置英雄1在屏幕中央
+        self.hero1.rect.centerx = self.screen_width // 2
+        self.hero1.rect.centery = self.screen_height - 100
         self.hero_group1 = pygame.sprite.Group(self.hero1)
+        
         self.hero2 = Hero('./images/life.png',wing = 2)
-        self.hero2.rect.x = 250
-        self.hero2.rect.y = 350
+        self.hero2.rect.x = self.screen_width // 2 - 100
+        self.hero2.rect.y = self.screen_height - 100
         self.hero_group2 = pygame.sprite.Group(self.hero2)
+        
         # 僚机组
         self.hero3 = Hero('./images/life.png',wing = 1)
         self.hero3.image = pygame.transform.scale(self.hero3.image,(35,25))

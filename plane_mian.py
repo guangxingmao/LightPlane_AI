@@ -29,7 +29,7 @@ class PlaneGame(object):
         self.score1 = 0
         self.score2 = 0
         # 设置背景音乐
-        # self.BGM = Music('./music/bgm1.mp3')
+        self.BGM = Music('./music/bgm1.mp3')
         #创建按钮对象
         # 可以控制鼠标显示和控制游戏开始暂停
         self.button = Button()

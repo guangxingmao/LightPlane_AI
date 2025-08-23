@@ -50,7 +50,8 @@ def train_ppo_agent(
     vf_coef=0.5,
     max_grad_norm=0.5,
     save_path="./models/",
-    log_path="./logs/"
+    log_path="./logs/",
+    continue_from=None
 ):
     """
     训练PPO智能体
@@ -87,24 +88,30 @@ def train_ppo_agent(
     
     print(f"🔄 创建了 {n_envs} 个并行训练环境")
     
-    # 创建PPO模型
-    model = PPO(
-        "MlpPolicy",  # 多层感知机策略
-        env,
-        learning_rate=learning_rate,
-        n_steps=n_steps,
-        batch_size=batch_size,
-        n_epochs=n_epochs,
-        gamma=gamma,
-        gae_lambda=gae_lambda,
-        clip_range=clip_range,
-        ent_coef=ent_coef,
-        vf_coef=vf_coef,
-        max_grad_norm=max_grad_norm,
-        verbose=1,
-        device="auto",  # 自动选择CPU/GPU
-        tensorboard_log=log_path
-    )
+    # 创建或加载PPO模型
+    if continue_from and os.path.exists(f"{continue_from}.zip"):
+        print(f"🔄 从现有模型继续训练: {continue_from}")
+        model = PPO.load(continue_from, env=env, verbose=1)
+        print("✅ 现有模型加载成功，继续训练...")
+    else:
+        print("🆕 创建新的PPO模型")
+        model = PPO(
+            "MlpPolicy",  # 多层感知机策略
+            env,
+            learning_rate=learning_rate,
+            n_steps=n_steps,
+            batch_size=batch_size,
+            n_epochs=n_epochs,
+            gamma=gamma,
+            gae_lambda=gae_lambda,
+            clip_range=clip_range,
+            ent_coef=ent_coef,
+            vf_coef=vf_coef,
+            max_grad_norm=max_grad_norm,
+            verbose=1,
+            device="auto",  # 自动选择CPU/GPU
+            tensorboard_log=log_path
+        )
     
     print("🧠 PPO模型创建完成!")
     print(f"📐 观察空间: {env.observation_space}")
@@ -244,12 +251,14 @@ def main():
                        help="模型路径 (测试模式使用)")
     parser.add_argument("--episodes", type=int, default=5,
                        help="测试回合数 (默认: 5)")
+    parser.add_argument("--continue_from", type=str, default=None,
+                       help="从现有模型继续训练 (模型路径，不包含.zip扩展名)")
     
     args = parser.parse_args()
     
     if args.mode == "train":
         print("🎯 训练模式")
-        train_ppo_agent(total_timesteps=args.timesteps)
+        train_ppo_agent(total_timesteps=args.timesteps, continue_from=args.continue_from)
     
     elif args.mode == "test":
         print("🧪 测试模式")

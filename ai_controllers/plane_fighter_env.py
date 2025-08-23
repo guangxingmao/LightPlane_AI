@@ -16,6 +16,9 @@ import random
 from typing import Optional, Tuple, Dict, Any
 
 # 导入游戏模块
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from plane_sprites import *
 
 
@@ -256,7 +259,10 @@ class PlaneFighterEnv(gym.Env):
     def _create_sprites(self):
         """创建游戏精灵"""
         # 创建英雄 - 使用训练专用的简化版本
-        self.hero = TrainingHero('./images/life.png')
+        # 修复图片路径，使用绝对路径
+        images_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'images')
+        hero_image_path = os.path.join(images_dir, 'life.png')
+        self.hero = TrainingHero(hero_image_path)
         # 将AI飞机放在屏幕左侧，远离敌人
         self.hero.rect.centerx = self.screen_width // 6
         self.hero.rect.centery = self.screen_height // 2

@@ -34,7 +34,10 @@ class Enemy(GameSprites):
     '''敌军精灵类'''
 
     def __init__(self):
-        image_name = './images/enemy1.png'
+        # 修复图片路径，使用绝对路径
+        import os
+        images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        image_name = os.path.join(images_dir, 'enemy1.png')
 
         super().__init__(image_name)
         self.speed = random.randint(1, 10)
@@ -103,7 +106,10 @@ class Background(GameSprites):
     '''背景精灵类'''
 
     def __init__(self, is_alt=False):
-        image_name = './images/background.png'
+        # 修复图片路径，使用绝对路径
+        import os
+        images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        image_name = os.path.join(images_dir, 'background.png')
 
         super().__init__(image_name)
         # 判断是否交替图片，如果是，将图片设置到屏幕顶部
@@ -116,7 +122,10 @@ class Background(GameSprites):
             self.rect.x = SCREEN_RECT.width
 
         def __init__(self, hero):
-            image_name = './images/life.png'
+            # 修复图片路径，使用绝对路径
+            import os
+            images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+            image_name = os.path.join(images_dir, 'life.png')
             super().__init__(image_name)
 
             self.rect.x = hero.rect.x
@@ -139,7 +148,10 @@ class Bullet_Hero(GameSprites):
     '''英雄子弹精灵类'''
 
     def __init__(self,):
-        image_name = './images/bullet22.png'
+        # 修复图片路径，使用绝对路径
+        import os
+        images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        image_name = os.path.join(images_dir, 'bullet22.png')
         super().__init__(image_name)
         self.image = pygame.transform.scale(self.image, (8, 3))
         self.speed = 20
@@ -249,7 +261,10 @@ class Bullet_Enemy(GameSprites):
     '''敌人子弹精灵'''
 
     def __init__(self):
-        image_name = './images/bullet22.png'  # 使用和玩家子弹一样的图片
+        # 修复图片路径，使用绝对路径
+        import os
+        images_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+        image_name = os.path.join(images_dir, 'bullet22.png')  # 使用和玩家子弹一样的图片
         super().__init__(image_name)
         self.image = pygame.transform.scale(self.image, (8, 3))  # 和玩家子弹一样的尺寸
         self.speed = 8  # 稍微降低速度，让玩家有机会躲避

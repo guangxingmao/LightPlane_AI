@@ -236,26 +236,52 @@ class EasterEggPage:
     def __check_collide(self):
         '''碰撞检测'''
         # 子弹碰撞敌人
-        if pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True):
+        hit_enemies = pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True)
+        if hit_enemies:
             self.score += 1
+            # 敌人死亡时，将其子弹转移到全局子弹组，让子弹继续存在
+            # hit_enemies的键是子弹，值是敌人列表
+            for player_bullet, enemies in hit_enemies.items():
+                for enemy in enemies:
+                    # 将敌机的所有子弹复制到全局子弹组，并设置子弹的独立属性
+                    for enemy_bullet in enemy.bullets:
+                        # 创建新的子弹实例，避免引用问题
+                        new_bullet = Bullet_Enemy()
+                        new_bullet.rect = enemy_bullet.rect.copy()
+                        new_bullet.speed = enemy_bullet.speed
+                        self.global_enemy_bullets.add(new_bullet)
+                    # 清空敌机的子弹组
+                    enemy.bullets.empty()
             # 创建击中粒子效果
-            for enemy in self.enemy_group:
-                for _ in range(10):
-                    particle = {
-                        'x': enemy.rect.centerx,
-                        'y': enemy.rect.centery,
-                        'vx': random.uniform(-3, 3),
-                        'vy': random.uniform(-3, 3),
-                        'life': 40,
-                        'color': (255, 255, 0),  # 黄色爆炸
-                        'size': random.randint(2, 4)
-                    }
-                    self.particles.append(particle)
+            for player_bullet, enemies in hit_enemies.items():
+                for enemy in enemies:
+                    for _ in range(10):
+                        particle = {
+                            'x': enemy.rect.centerx,
+                            'y': enemy.rect.centery,
+                            'vx': random.uniform(-3, 3),
+                            'vy': random.uniform(-3, 3),
+                            'life': 40,
+                            'color': (255, 255, 0),  # 黄色爆炸
+                            'size': random.randint(2, 4)
+                        }
+                        self.particles.append(particle)
 
         # 敌人碰撞英雄
         enemys1 = pygame.sprite.spritecollide(
             self.hero1, self.enemy_group, True)
         if len(enemys1) > 0 and self.life > 0:
+            self.life -= 1
+            if self.life == 0:
+                # 英雄死亡后，移除屏幕
+                self.hero1.rect.bottom = 0
+                self.hero1.rect.x = self.screen_width
+                self.hero1.kill()
+        
+        # 敌人子弹碰撞英雄1 - 使用全局子弹组
+        bullets1 = pygame.sprite.spritecollide(
+            self.hero1, self.global_enemy_bullets, True)
+        if len(bullets1) > 0 and self.life > 0:
             self.life -= 1
             if self.life == 0:
                 # 英雄死亡后，移除屏幕
@@ -273,23 +299,30 @@ class EasterEggPage:
         '''更新精灵组'''
 
         if self.button.pause_game % 2 != 0:
-            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group, self.enemy.bullets,]: 
+            # 绘制所有精灵组
+            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group, self.global_enemy_bullets]: 
                 group.draw(self.screen)
-                self.button.update()
-                # 重新设置按钮位置到左下角
-                self.button.rect.x = 20
-                self.button.rect.bottom = self.screen_height - 20
-                self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
+            
+            self.button.update()
+            # 重新设置按钮位置到左下角
+            self.button.rect.x = 20
+            self.button.rect.bottom = self.screen_height - 20
+            self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
 
         elif self.button.pause_game % 2 == 0:
-            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group, self.enemy.bullets,]:
+            # 绘制和更新所有精灵组
+            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group]:
                 group.draw(self.screen)
                 group.update()
-                self.button.update()
-                # 重新设置按钮位置到左下角
-                self.button.rect.x = 20
-                self.button.rect.bottom = self.screen_height - 20
-                self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
+            # 绘制和更新全局敌人子弹组
+            self.global_enemy_bullets.draw(self.screen)
+            self.global_enemy_bullets.update()
+            
+            self.button.update()
+            # 重新设置按钮位置到左下角
+            self.button.rect.x = 20
+            self.button.rect.bottom = self.screen_height - 20
+            self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
         
         # 手动更新背景位置以适应新的屏幕尺寸
         for bg in self.back_group:
@@ -349,6 +382,11 @@ class EasterEggPage:
         # 敌机组
         self.enemy = Enemy()
         self.enemy_group = pygame.sprite.Group()
+        # 添加敌人到敌机组
+        self.enemy_group.add(self.enemy)
+        
+        # 全局敌人子弹组 - 管理所有敌人的子弹，即使敌人死亡子弹也继续存在
+        self.global_enemy_bullets = pygame.sprite.Group()
 
         # 英雄组 - 只有玩家1
         self.hero1 = Hero('./images/life.png')

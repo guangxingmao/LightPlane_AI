@@ -49,6 +49,11 @@ class Enemy(GameSprites):
 
         # 创建敌军子弹精灵组
         self.bullets = pygame.sprite.Group()
+        
+        # 敌人射击相关属性
+        self.fire_cooldown = 0
+        self.fire_interval = random.randint(60, 120)  # 1-2秒射击间隔
+        self.can_fire = True
 
         # 设置定时器事件
         # 0.5秒出现一架敌机
@@ -68,6 +73,15 @@ class Enemy(GameSprites):
 
         if self.rect.x <= 0:
             self.kill()
+        
+        # 敌人自动射击逻辑
+        if self.can_fire:
+            self.fire_cooldown += 1
+            if self.fire_cooldown >= self.fire_interval:
+                self.fire()
+                self.fire_cooldown = 0
+                # 随机重置射击间隔，让敌人射击更自然
+                self.fire_interval = random.randint(60, 120)
 
     def fire(self):
         '''发射子弹'''
@@ -75,7 +89,14 @@ class Enemy(GameSprites):
         # 设置子弹初始位置
         bullet.rect.centerx = self.rect.centerx
         bullet.rect.bottom = self.rect.bottom
+        # 子弹添加到自己的子弹组，同时也会被游戏页面管理
         self.bullets.add(bullet)
+    
+    def kill(self):
+        '''敌人死亡时，子弹继续存在，不随飞机一起消失'''
+        # 敌人死亡时，子弹继续存在，直到超出屏幕或命中目标
+        # 子弹组不会被销毁，子弹会继续移动
+        super().kill()
 
 
 class Background(GameSprites):
@@ -228,9 +249,14 @@ class Bullet_Enemy(GameSprites):
     '''敌人子弹精灵'''
 
     def __init__(self):
-        image_name = './images/bullet2.png'
+        image_name = './images/bullet22.png'  # 使用和玩家子弹一样的图片
         super().__init__(image_name)
-        self.speed = 10
+        self.image = pygame.transform.scale(self.image, (8, 3))  # 和玩家子弹一样的尺寸
+        self.speed = 8  # 稍微降低速度，让玩家有机会躲避
 
     def update(self):
-        self.rect.y += self.speed
+        # 敌人子弹向左移动（朝向玩家）
+        self.rect.x -= self.speed
+        # 如果子弹超出屏幕左边界，则销毁
+        if self.rect.right <= 0:
+            self.kill()

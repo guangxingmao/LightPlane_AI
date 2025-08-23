@@ -386,7 +386,7 @@ class PlaneFighterEnv(gym.Env):
             self.hero, self.enemy_bullets, True
         )
         if hit_by_bullets:
-            reward -= 1.0  # 减少惩罚
+            reward -= 2.0  # 增加子弹击中惩罚
             self.lives -= 1
         
         # 移动奖励 - 鼓励AI移动和探索

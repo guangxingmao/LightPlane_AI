@@ -12,6 +12,14 @@ except ImportError as e:
     print(f"游戏模块加载失败: {e}")
     GAME_MODULES_LOADED = False
 
+# 尝试导入双人游戏页面
+try:
+    from dual_game_page import DualGamePage
+    DUAL_GAME_LOADED = True
+except ImportError as e:
+    print(f"双人游戏页面加载失败: {e}")
+    DUAL_GAME_LOADED = False
+
 # 初始化pygame
 pygame.init()
 
@@ -84,23 +92,14 @@ class GameManager:
     
     def __init__(self, screen):
         self.screen = screen
-        self.current_page = PageState.MAIN_MENU
         self.clock = pygame.time.Clock()
+        self.current_page = PageState.MAIN_MENU
         
-        # 游戏相关变量
-        self.game_objects = {}
-        self.init_game_objects()
-    
-    def init_game_objects(self):
-        """初始化游戏对象"""
-        if not GAME_MODULES_LOADED:
-            return
-            
-        try:
-            # 这里可以初始化游戏相关的对象
-            pass
-        except Exception as e:
-            print(f"初始化游戏对象失败: {e}")
+        # 初始化双人游戏页面
+        if DUAL_GAME_LOADED:
+            self.dual_game_page = DualGamePage(screen)
+        else:
+            self.dual_game_page = None
     
     def change_page(self, new_page):
         """切换页面"""
@@ -223,73 +222,46 @@ class GameManager:
     
     def handle_dual_mode(self):
         """处理双人模式页面"""
-        # 绘制双人模式界面
-        self.draw_dual_mode()
-        
-        # 处理事件
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-                
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+        if not self.dual_game_page:
+            # 如果双人游戏页面未加载，显示错误信息
+            self.draw_background()
+            error_font = pygame.font.Font("C:/Windows/Fonts/msyh.ttc", 24) if os.path.exists("C:/Windows/Fonts/msyh.ttc") else pygame.font.SysFont("arial", 24)
+            error_text = error_font.render("双人游戏模块加载失败", True, RED)
+            error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(error_text, error_rect)
+            
+            # 处理事件
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     self.change_page(PageState.MAIN_MENU)
                     return True
+            return True
+        
+        # 如果游戏未初始化，先初始化游戏
+        if not self.dual_game_page.game_initialized:
+            try:
+                self.dual_game_page.init_game()
+                self.dual_game_page.game_running = True
+                print("双人游戏已启动，按ESC键返回主菜单")
+            except Exception as e:
+                print(f"启动双人游戏失败: {e}")
+                return True
+        
+        # 如果游戏正在运行，直接运行游戏逻辑
+        if self.dual_game_page.game_running:
+            result = self.dual_game_page.run_game()
+            if result == "game_over":
+                self.dual_game_page.reset_game()
+                self.dual_game_page.game_running = False
+            elif result == "quit":
+                return False
+            elif result == "error":
+                self.dual_game_page.reset_game()
+                self.dual_game_page.game_running = False
         
         return True
-    
-    def draw_dual_mode(self):
-        """绘制双人模式界面"""
-        # 绘制背景
-        self.draw_background()
-        
-        # 绘制标题
-        title_text = title_font.render("双人模式", True, WHITE)
-        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
-        self.screen.blit(title_text, title_rect)
-        
-        # 绘制游戏说明
-        info_font = pygame.font.Font("C:/Windows/Fonts/msyh.ttc", 20) if os.path.exists("C:/Windows/Fonts/msyh.ttc") else pygame.font.SysFont("arial", 20)
-        
-        instructions = [
-            "玩家1: 方向键控制移动",
-            "玩家2: WASD键控制移动",
-            "空格键: 暂停/继续音乐",
-            "`键: 显示/隐藏鼠标",
-            "Q键: 退出游戏"
-        ]
-        
-        for i, instruction in enumerate(instructions):
-            text = info_font.render(instruction, True, WHITE)
-            rect = text.get_rect(center=(SCREEN_WIDTH // 2, 200 + i * 40))
-            self.screen.blit(text, rect)
-        
-        # 绘制返回按钮
-        back_button = Button(50, SCREEN_HEIGHT - 80, 120, 40, "返回主菜单", GRAY, LIGHT_BLUE)
-        back_button.draw(self.screen)
-        
-        # 绘制开始游戏按钮
-        start_button = Button(SCREEN_WIDTH - 170, SCREEN_HEIGHT - 80, 120, 40, "开始游戏", GREEN, (0, 200, 0))
-        start_button.draw(self.screen)
-        
-        # 处理按钮点击
-        mouse_pos = pygame.mouse.get_pos()
-        if pygame.mouse.get_pressed()[0]:  # 左键点击
-            if back_button.rect.collidepoint(mouse_pos):
-                self.change_page(PageState.MAIN_MENU)
-            elif start_button.rect.collidepoint(mouse_pos):
-                self.start_dual_game()
-    
-    def start_dual_game(self):
-        """启动双人游戏"""
-        try:
-            # 这里直接启动双人游戏，而不是通过os.system
-            # 可以在这里集成原有的游戏代码
-            print("启动双人游戏...")
-            # 暂时返回主菜单，后续可以在这里集成游戏
-            self.change_page(PageState.MAIN_MENU)
-        except Exception as e:
-            print(f"启动双人游戏失败: {e}")
     
     def handle_traditional_mode(self):
         """处理传统模式页面"""

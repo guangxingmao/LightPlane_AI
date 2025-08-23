@@ -53,10 +53,13 @@ class TrainedAIController:
             (-1, -1),  # 7: 左上
         ]
         
-        # 移动参数
-        self.move_speed = 5
+        # 移动参数 - 优化减少抖动
+        self.move_speed = 3  # 降低基础移动速度
         self.last_action = 0
         self.action_cooldown = 0
+        self.last_position = None  # 记录上次位置
+        self.position_change_threshold = 2  # 位置变化阈值
+        self.action_stability = 0  # 动作稳定性计数器
     
     def _load_model(self):
         """加载训练好的模型"""
@@ -162,7 +165,7 @@ class TrainedAIController:
         return []
     
     def _execute_action(self, action: int):
-        """执行预测的动作"""
+        """执行预测的动作 - 优化减少抖动"""
         if not self.hero or not hasattr(self.hero, 'rect'):
             return
         
@@ -171,19 +174,49 @@ class TrainedAIController:
             self.action_cooldown -= 1
             return
         
+        # 增加动作稳定性，避免频繁切换动作
+        if action == self.last_action:
+            self.action_stability += 1
+        else:
+            self.action_stability = 0
+        
         # 移动动作 (0-7: 8个方向)
         if action < 8:
             dx, dy = self.action_directions[action]
             
-            new_x = self.hero.rect.centerx + dx * self.move_speed
-            new_y = self.hero.rect.centery + dy * self.move_speed
+            # 动态调整移动速度，增加稳定性
+            if self.action_stability < 3:
+                # 动作刚切换时，降低速度
+                current_speed = self.move_speed * 0.5
+            elif self.action_stability < 10:
+                # 动作稳定一段时间后，恢复正常速度
+                current_speed = self.move_speed * 0.8
+            else:
+                # 动作非常稳定时，全速移动
+                current_speed = self.move_speed
+            
+            new_x = self.hero.rect.centerx + dx * current_speed
+            new_y = self.hero.rect.centery + dy * current_speed
             
             # 边界检查 - 限制在左侧区域（因为AI飞机现在在左下角）
             new_x = max(25, min(self.screen_width * 0.4, new_x))
             new_y = max(25, min(self.screen_height - 25, new_y))
             
-            self.hero.rect.centerx = int(new_x)
-            self.hero.rect.centery = int(new_y)
+            # 检查位置变化是否足够大，避免微小抖动
+            if self.last_position:
+                current_pos = (self.hero.rect.centerx, self.hero.rect.centery)
+                new_pos = (new_x, new_y)
+                position_change = math.sqrt((new_pos[0] - current_pos[0])**2 + (new_pos[1] - current_pos[1])**2)
+                
+                if position_change > self.position_change_threshold:
+                    self.hero.rect.centerx = int(new_x)
+                    self.hero.rect.centery = int(new_y)
+                    self.last_position = (int(new_x), int(new_y))
+            else:
+                # 第一次移动，直接更新
+                self.hero.rect.centerx = int(new_x)
+                self.hero.rect.centery = int(new_y)
+                self.last_position = (int(new_x), int(new_y))
         
         # 射击动作 (8)
         elif action == 8:

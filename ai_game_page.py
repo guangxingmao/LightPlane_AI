@@ -21,17 +21,22 @@ class OptimizedAIController:
         self.screen_height = screen_height
         self.is_player1 = is_player1
         
-        # 优化参数
+        # 优化参数 - 减少抖动
         self.decision_timer = 0
-        self.decision_interval = 20  # 每20帧做一次决策，减少卡顿
+        self.decision_interval = 60  # 每60帧做一次决策，减少抖动
         self.movement_pattern = 'patrol'
         self.last_move_time = 0
-        self.move_duration = 40  # 每次移动持续40帧
+        self.move_duration = 120  # 每次移动持续120帧，让移动更稳定
         
         # 移动目标
         self.target_x = 0
         self.target_y = 0
         self.moving = False
+        
+        # 添加移动平滑参数
+        self.last_position = None
+        self.position_change_threshold = 15  # 位置变化阈值，避免微小抖动
+        self.stable_time = 0  # 稳定时间计数器
         
         # 根据是玩家1还是玩家2设置不同的行为模式
         if is_player1:
@@ -68,7 +73,7 @@ class OptimizedAIController:
             self.moving = False
     
     def make_decision(self):
-        """AI决策逻辑"""
+        """AI决策逻辑 - 优化减少抖动"""
         # 寻找最近的敌人
         nearest_enemy = self.find_nearest_enemy()
         
@@ -76,22 +81,33 @@ class OptimizedAIController:
             # 计算与敌人的距离
             distance = self.calculate_distance(self.hero.rect.center, nearest_enemy.rect.center)
             
-            # 根据距离决定行为
+            # 根据距离决定行为，增加稳定性判断
             if distance < 80:  # 敌人太近时躲避
-                self.movement_pattern = 'evade'
-                self.set_evade_target(nearest_enemy)
+                if self.movement_pattern != 'evade' or self.stable_time > 30:
+                    self.movement_pattern = 'evade'
+                    self.set_evade_target(nearest_enemy)
+                    self.stable_time = 0
             elif distance < 150:  # 中等距离时追击
-                self.movement_pattern = 'chase'
-                self.set_chase_target(nearest_enemy)
+                if self.movement_pattern != 'chase' or self.stable_time > 40:
+                    self.movement_pattern = 'chase'
+                    self.set_chase_target(nearest_enemy)
+                    self.stable_time = 0
             else:  # 远距离时巡逻
-                self.movement_pattern = 'patrol'
-                self.set_patrol_target()
+                if self.movement_pattern != 'patrol' or self.stable_time > 50:
+                    self.movement_pattern = 'patrol'
+                    self.set_patrol_target()
+                    self.stable_time = 0
             
             # 自动射击
             self.auto_shoot(nearest_enemy)
         else:
-            # 没有敌人时巡逻
-            self.set_patrol_target()
+            # 没有敌人时巡逻，增加稳定性
+            if self.movement_pattern != 'patrol' or self.stable_time > 60:
+                self.set_patrol_target()
+                self.stable_time = 0
+        
+        # 增加稳定时间
+        self.stable_time += 1
     
     def set_chase_target(self, enemy):
         """设置追击目标"""
@@ -142,29 +158,38 @@ class OptimizedAIController:
             self.moving = True
     
     def set_patrol_target(self):
-        """设置巡逻目标"""
+        """设置巡逻目标 - 优化减少抖动"""
         patrol_radius = 80
         
-        # 在巡逻区域内随机选择目标点
-        if random.random() < 0.3:  # 30%概率改变巡逻目标
+        # 降低巡逻目标变化频率，减少抖动
+        if random.random() < 0.1:  # 从30%降低到10%概率改变巡逻目标
             angle = random.uniform(0, 2 * math.pi)
             distance = random.uniform(0, patrol_radius)
             
-            self.target_x = self.patrol_center_x + math.cos(angle) * distance
-            self.target_y = self.patrol_center_y + math.sin(angle) * distance
+            new_target_x = self.patrol_center_x + math.cos(angle) * distance
+            new_target_y = self.patrol_center_y + math.sin(angle) * distance
             
-            # 边界检查
-            if self.is_player1:
-                self.target_x = max(50, min(self.screen_width * 0.4, self.target_x))
-            else:
-                # AI飞机现在在左下角，限制在左侧区域
-                self.target_x = max(50, min(self.screen_width * 0.4, self.target_x))
+            # 检查新目标是否与当前位置差异足够大，避免微小移动
+            current_pos = (self.hero.rect.centerx, self.hero.rect.centery)
+            new_pos = (new_target_x, new_target_y)
+            distance_to_new_target = self.calculate_distance(current_pos, new_pos)
             
-            self.target_y = max(50, min(self.screen_height - 50, self.target_y))
-            self.moving = True
+            if distance_to_new_target > self.position_change_threshold:
+                self.target_x = new_target_x
+                self.target_y = new_target_y
+                
+                # 边界检查
+                if self.is_player1:
+                    self.target_x = max(50, min(self.screen_width * 0.4, self.target_x))
+                else:
+                    # AI飞机现在在左下角，限制在左侧区域
+                    self.target_x = max(50, min(self.screen_width * 0.4, self.target_x))
+                
+                self.target_y = max(50, min(self.screen_height - 50, self.target_y))
+                self.moving = True
     
     def execute_movement(self):
-        """执行移动"""
+        """执行移动 - 优化减少抖动"""
         if not self.moving:
             return
         
@@ -174,12 +199,19 @@ class OptimizedAIController:
         distance = math.sqrt(dx**2 + dy**2)
         
         # 如果已经接近目标，停止移动
-        if distance < 5:
+        if distance < 8:  # 增加停止距离，减少抖动
             self.moving = False
             return
         
-        # 平滑移动
-        move_speed = 2  # 降低移动速度，减少卡顿
+        # 动态调整移动速度，距离越近速度越慢
+        base_speed = 2
+        if distance < 20:
+            move_speed = base_speed * 0.5  # 接近目标时减速
+        elif distance < 50:
+            move_speed = base_speed * 0.8  # 中等距离时中速
+        else:
+            move_speed = base_speed  # 远距离时全速
+        
         if distance > 0:
             dx = (dx / distance) * move_speed
             dy = (dy / distance) * move_speed
@@ -197,8 +229,21 @@ class OptimizedAIController:
         
         new_y = max(50, min(self.screen_height - 50, new_y))
         
-        self.hero.rect.centerx = new_x
-        self.hero.rect.centery = new_y
+        # 检查位置变化是否足够大，避免微小抖动
+        if self.last_position:
+            current_pos = (self.hero.rect.centerx, self.hero.rect.centery)
+            new_pos = (new_x, new_y)
+            position_change = self.calculate_distance(current_pos, new_pos)
+            
+            if position_change > 1:  # 只有位置变化大于1像素时才更新
+                self.hero.rect.centerx = new_x
+                self.hero.rect.centery = new_y
+                self.last_position = (new_x, new_y)
+        else:
+            # 第一次移动，直接更新
+            self.hero.rect.centerx = new_x
+            self.hero.rect.centery = new_y
+            self.last_position = (new_x, new_y)
     
     def find_nearest_enemy(self):
         """找到最近的敌人"""

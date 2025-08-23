@@ -89,21 +89,17 @@ def get_simple_font(size):
             return None
 
 # 字体设置
-try:
-    title_font = pygame.font.Font("C:/Windows/Fonts/msyh.ttc", 48)  # 微软雅黑
-    button_font = pygame.font.Font("C:/Windows/Fonts/msyh.ttc", 24)
-except:
-    title_font = pygame.font.SysFont("arial", 48)
-    button_font = pygame.font.SysFont("arial", 24)
+title_font = pygame.font.SysFont("arial", 48)
+button_font = pygame.font.SysFont("arial", 24)
 
 # 页面状态枚举
 class PageState:
     MAIN_MENU = "main_menu"
     TRADITIONAL_MODE = "traditional_mode"
     DUAL_MODE = "dual_mode"
-    EASTER_EGG_MODE = "easter_egg_mode"
     AI_MODE = "ai_mode"
     CUSTOM_MODE = "custom_mode"
+    EASTER_EGG_MODE = "easter_egg_mode"
 
 class Button:
     def __init__(self, x, y, width, height, text, color, hover_color):
@@ -190,12 +186,13 @@ class GameManager:
                 running = self.handle_dual_mode()
             elif self.current_page == PageState.TRADITIONAL_MODE:
                 running = self.handle_traditional_mode()
-            elif self.current_page == PageState.EASTER_EGG_MODE:
-                running = self.handle_easter_egg_mode()
-            elif self.current_page == PageState.AI_MODE:
-                running = self.handle_ai_mode()
             elif self.current_page == PageState.CUSTOM_MODE:
                 running = self.handle_custom_mode()
+            elif self.current_page == PageState.AI_MODE:
+                running = self.handle_ai_mode()
+            elif self.current_page == PageState.EASTER_EGG_MODE:
+                running = self.handle_easter_egg_mode()
+     
             
             pygame.display.flip()
             self.clock.tick(60)
@@ -213,9 +210,9 @@ class GameManager:
         buttons = [
             Button(center_x, 200, button_width, button_height, "Traditional Mode", LIGHT_BLUE, BLUE),
             Button(center_x, 280, button_width, button_height, "Dual Player Mode", GREEN, (0, 200, 0)),
-            Button(center_x, 360, button_width, button_height, "Easter Egg Mode 🥚", (255, 20, 147), (255, 105, 180)),
-            Button(center_x, 440, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
-            Button(center_x, 520, button_width, button_height, "Custom Mode", RED, (200, 0, 0))
+            Button(center_x, 360, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
+            Button(center_x, 440, button_width, button_height, "Custom Mode", RED, (200, 0, 0)),
+            Button(center_x, 520, button_width, button_height, "Easter Egg Mode", (255, 20, 147), (255, 105, 180))
         ]
         
         # 绘制主菜单
@@ -237,12 +234,12 @@ class GameManager:
                         self.change_page(PageState.TRADITIONAL_MODE)
                     elif i == 1:  # 双人模式
                         self.change_page(PageState.DUAL_MODE)
-                    elif i == 2:  # 彩蛋模式
-                        self.change_page(PageState.EASTER_EGG_MODE)
-                    elif i == 3:  # AI模式
+                    elif i == 2:  # AI模式
                         self.change_page(PageState.AI_MODE)
-                    elif i == 4:  # 自定义模式
+                    elif i == 3:  # 自定义模式
                         self.change_page(PageState.CUSTOM_MODE)
+                    elif i == 4:  # 彩蛋模式
+                        self.change_page(PageState.EASTER_EGG_MODE)
         
         return True
     

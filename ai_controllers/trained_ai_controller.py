@@ -36,7 +36,7 @@ class TrainedAIController:
         # 如果没有训练好的模型，使用简单AI作为备用
         if not self.use_trained_model:
             print("🤖 使用简单AI控制器作为备用")
-            from ai_game_page import OptimizedAIController
+            from .optimized_ai_controller import OptimizedAIController
             self.backup_ai = OptimizedAIController(hero, enemy_group, screen_width, screen_height, False)
         else:
             self.backup_ai = None
@@ -236,7 +236,7 @@ class HybridAIController:
         self.trained_ai = TrainedAIController(hero, enemy_group, screen_width, screen_height, model_path)
         
         # 创建简单AI作为备用
-        from ai_game_page import OptimizedAIController
+        from .optimized_ai_controller import OptimizedAIController
         self.simple_ai = OptimizedAIController(hero, enemy_group, screen_width, screen_height, False)
         
         # 控制参数
@@ -271,7 +271,7 @@ def create_ai_controller(hero, enemy_group, screen_width, screen_height, control
     if controller_type == "trained":
         return TrainedAIController(hero, enemy_group, screen_width, screen_height)
     elif controller_type == "simple":
-        from ai_game_page import OptimizedAIController
+        from .optimized_ai_controller import OptimizedAIController
         return OptimizedAIController(hero, enemy_group, screen_width, screen_height, False)
     else:  # hybrid
         return HybridAIController(hero, enemy_group, screen_width, screen_height)

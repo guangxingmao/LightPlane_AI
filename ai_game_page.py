@@ -307,7 +307,7 @@ class AIGamePage:
         
         # 创建玩家2的AI控制器 - 尝试使用训练好的模型
         try:
-            from trained_ai_controller import create_ai_controller
+            from ai_controllers import create_ai_controller
             print("尝试使用训练好的AI模型...")
             self.ai_controller2 = create_ai_controller(
                 self.hero2, self.enemy_group, 
@@ -317,6 +317,7 @@ class AIGamePage:
         except Exception as e:
             print(f"训练模型加载失败: {e}")
             print("使用优化的简单AI控制器")
+            from ai_controllers import OptimizedAIController
             self.ai_controller2 = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)
 
     def start_game(self):
@@ -651,7 +652,7 @@ class AIGamePage:
         self.hero2.time_count = 1
         # 重新创建AI控制器（只创建玩家2的AI）
         try:
-            from trained_ai_controller import create_ai_controller
+            from ai_controllers import create_ai_controller
             self.ai_controller2 = create_ai_controller(
                 self.hero2, self.enemy_group, 
                 self.screen_width, self.screen_height, 
@@ -659,4 +660,5 @@ class AIGamePage:
             )
         except Exception as e:
             print(f"重置时训练模型加载失败: {e}")
+            from ai_controllers import OptimizedAIController
             self.ai_controller2 = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)

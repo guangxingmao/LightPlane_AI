@@ -98,15 +98,24 @@ class TraditionalGamePage:
                 return True
                 
             print(event)
-            # 创建一个虚拟的hero2对象，避免None错误
+            # 创建虚拟的hero2和hero3对象，避免None错误（传统模式不需要僚机）
             dummy_hero2 = type('DummyHero', (), {
                 'fire': lambda *args: None, 
                 'moving_right': False, 
                 'moving_left': False, 
                 'moving_up': False, 
-                'moving_down': False
+                'moving_down': False,
+                'time_count': 1
             })()
-            check_KEY(self.hero1, dummy_hero2, self.hero3, self.enemy,
+            dummy_hero3 = type('DummyHero', (), {
+                'fire': lambda *args: None, 
+                'moving_right': False, 
+                'moving_left': False, 
+                'moving_up': False, 
+                'moving_down': False,
+                'time_count': 1
+            })()
+            check_KEY(self.hero1, dummy_hero2, dummy_hero3, self.enemy,
                       event, self.enemy_group, self.BGM, self.button)
             check_mouse(event, self.button)
 
@@ -121,8 +130,8 @@ class TraditionalGamePage:
 
     def __check_collide(self):
         '''碰撞检测'''
-        # 子弹碰撞敌人
-        if pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True) or pygame.sprite.groupcollide(self.hero3.bullets, self.enemy_group, True, True):
+        # 子弹碰撞敌人（只检测主英雄的子弹）
+        if pygame.sprite.groupcollide(self.hero1.bullets, self.enemy_group, True, True):
             self.score1 += 1
 
         # 敌人碰撞英雄
@@ -131,22 +140,10 @@ class TraditionalGamePage:
         if len(enemys1) > 0 and self.life1 > 0:
             self.life1 -= 1
             if self.life1 == 0:
-                # 英雄死亡后，僚机也随之消失
-                self.hero3.rect.x = 1000
-                self.hero3.rect.y = 1000
-                self.hero3.kill()
                 # 英雄死亡后，移除屏幕
                 self.hero1.rect.bottom = 0
                 self.hero1.rect.x = self.screen_width
                 self.hero1.kill()
-
-        # 检测僚机和敌机的碰撞
-        enemys3 = pygame.sprite.spritecollide(self.hero3, self.enemy_group, True) 
-        if len(enemys3) > 0:
-            self.hero3.rect.x = 1000
-            self.hero3.rect.y = 1000
-            self.hero1.wing = 2
-            self.hero3.kill()
 
         # 当玩家死亡，游戏结束
         if self.life1 == 0:
@@ -158,7 +155,7 @@ class TraditionalGamePage:
         '''更新精灵组'''
 
         if self.button.pause_game % 2 != 0:
-            for group in [self.back_group, self.hero_group1, self.hero_group3, self.hero1.bullets, self.hero3.bullets, self.enemy_group, self.enemy.bullets,]: 
+            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group, self.enemy.bullets,]: 
                 group.draw(self.screen)
                 self.button.update()
                 # 重新设置按钮位置到左下角
@@ -167,7 +164,7 @@ class TraditionalGamePage:
                 self.screen.blit(self.button.image,(self.button.rect.x,self.button.rect.y))
 
         elif self.button.pause_game % 2 == 0:
-            for group in [self.back_group, self.hero_group1, self.hero_group3, self.hero1.bullets, self.hero3.bullets, self.enemy_group, self.enemy.bullets,]:
+            for group in [self.back_group, self.hero_group1, self.hero1.bullets, self.enemy_group, self.enemy.bullets,]:
                 group.draw(self.screen)
                 group.update()
                 self.button.update()
@@ -220,15 +217,7 @@ class TraditionalGamePage:
 
         # 英雄组 - 只有玩家1
         self.hero1 = Hero('./images/life.png')
-        # 设置英雄1在屏幕中央
-        self.hero1.rect.centerx = self.screen_width // 2
-        self.hero1.rect.centery = self.screen_height - 100
+        # 设置英雄1在左侧居中
+        self.hero1.rect.x = 50
+        self.hero1.rect.centery = self.screen_height // 2
         self.hero_group1 = pygame.sprite.Group(self.hero1)
-        
-        # 僚机组
-        self.hero3 = Hero('./images/life.png',wing = 1)
-        self.hero3.image = pygame.transform.scale(self.hero3.image,(35,25))
-        # 僚机跟随英雄1，位置稍微偏上
-        self.hero3.rect.centerx = self.hero1.rect.centerx 
-        self.hero3.rect.centery = self.hero1.rect.centery - 35
-        self.hero_group3 = pygame.sprite.Group(self.hero3)

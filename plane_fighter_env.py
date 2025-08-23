@@ -167,6 +167,11 @@ class PlaneFighterEnv(gym.Env):
         self.is_terminated = False
         self.is_truncated = False
         
+        # 初始化移动和探索相关变量
+        self.last_position = None
+        self.safe_zone_time = 0
+        self.explored_positions = set()
+        
         # 创建游戏对象
         self._create_sprites()
         
@@ -309,6 +314,9 @@ class PlaneFighterEnv(gym.Env):
             self.hero.rect.centerx = new_x
             self.hero.rect.centery = new_y
             
+            # 移动奖励 - 鼓励AI移动
+            reward += 0.02
+            
         # 射击动作 (8)
         elif action == 8:
             if self.hero.time_count > 0:
@@ -345,7 +353,7 @@ class PlaneFighterEnv(gym.Env):
                 self.enemy_bullets.add(bullet)
     
     def _calculate_reward(self) -> float:
-        """计算奖励 - 优化版本"""
+        """计算奖励 - 优化版本，鼓励AI移动和探索"""
         reward = 0.0
         
         if not self.hero or not self.hero.alive():
@@ -381,9 +389,41 @@ class PlaneFighterEnv(gym.Env):
             reward -= 1.0  # 减少惩罚
             self.lives -= 1
         
-        # 位置奖励 - 鼓励在安全区域活动
+        # 移动奖励 - 鼓励AI移动和探索
+        if hasattr(self, 'last_position') and self.last_position is not None:
+            current_pos = (self.hero.rect.centerx, self.hero.rect.centery)
+            distance_moved = math.sqrt(
+                (current_pos[0] - self.last_position[0]) ** 2 +
+                (current_pos[1] - self.last_position[1]) ** 2
+            )
+            if distance_moved > 0:
+                reward += 0.1  # 增加移动奖励
+                # 如果移动距离较大，给予额外奖励
+                if distance_moved > 10:
+                    reward += 0.2  # 增加大移动奖励
+                elif distance_moved > 5:
+                    reward += 0.1  # 中等移动奖励
+            else:
+                # 静止惩罚 - 鼓励移动
+                reward -= 0.05  # 增加静止惩罚
+        
+        # 更新位置记录
+        self.last_position = (self.hero.rect.centerx, self.hero.rect.centery)
+        
+        # 位置奖励 - 鼓励在安全区域活动，但不要总是待在原地
         if self.hero.rect.centerx < self.screen_width // 3:
             reward += 0.02  # 增加安全区域奖励
+            # 如果AI在安全区域但长时间不动，给予探索奖励
+            if hasattr(self, 'safe_zone_time'):
+                self.safe_zone_time += 1
+                if self.safe_zone_time > 50:  # 50步后开始鼓励探索
+                    reward += 0.03
+            else:
+                self.safe_zone_time = 0
+        else:
+            # 离开安全区域时重置计时器
+            if hasattr(self, 'safe_zone_time'):
+                self.safe_zone_time = 0
         
         # 距离奖励 - 鼓励接近敌人进行攻击
         nearest_enemy = self.hero._find_nearest_enemy(self.enemy_group)
@@ -393,10 +433,24 @@ class PlaneFighterEnv(gym.Env):
             )
             if distance < 200:  # 在攻击范围内
                 reward += 0.05  # 鼓励接近敌人
+            elif distance > 400:  # 如果敌人太远，鼓励AI主动接近
+                reward += 0.02
         
         # 射击奖励 - 鼓励射击
         if hasattr(self.hero, 'time_count') and self.hero.time_count <= 0:
             reward += 0.01  # 射击后的小奖励
+        
+        # 探索奖励 - 鼓励AI探索不同区域
+        if hasattr(self, 'explored_positions'):
+            current_zone = (self.hero.rect.centerx // 100, self.hero.rect.centery // 100)
+            if current_zone not in self.explored_positions:
+                self.explored_positions.add(current_zone)
+                reward += 0.3  # 增加探索新区域奖励
+            else:
+                # 即使在同一区域，也鼓励移动
+                reward += 0.02
+        else:
+            self.explored_positions = set()
         
         return reward
     

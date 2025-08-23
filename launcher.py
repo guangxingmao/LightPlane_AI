@@ -117,6 +117,8 @@ class Button:
         self.hover_color = hover_color
         self.current_color = color
         self.hovered = False
+        self.last_click_time = 0  # 防抖：记录上次点击时间
+        self.click_cooldown = 200  # 防抖：200毫秒冷却时间
         
     def draw(self, surface):
         pygame.draw.rect(surface, self.current_color, self.rect)
@@ -138,7 +140,11 @@ class Button:
                 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
-                return True
+                current_time = pygame.time.get_ticks()
+                # 防抖：检查是否在冷却时间内
+                if current_time - self.last_click_time > self.click_cooldown:
+                    self.last_click_time = current_time
+                    return True
         return False
 
 class GameManager:
@@ -173,11 +179,9 @@ class GameManager:
         else:
             self.easter_egg_page = None
             
-        # 初始化AI模式游戏页面
-        if AI_GAME_LOADED:
-            self.ai_game_page = AIGamePage(screen)
-        else:
-            self.ai_game_page = None
+        # 初始化AI模式游戏页面 - 延迟加载
+        self.ai_game_page = None  # 先设为None，需要时再加载
+        self._ai_game_loading = False  # 加载状态标志
         
         # 初始化页面状态标志
         self._traditional_mode_initialized = False
@@ -436,21 +440,100 @@ class GameManager:
     
     def handle_ai_mode(self):
         """处理AI模式页面"""
-        if not self.ai_game_page:
-            # 如果AI模式游戏页面未加载，显示错误信息
+        # 延迟加载AI游戏页面
+        if not self.ai_game_page and not self._ai_game_loading:
+            if not AI_GAME_LOADED:
+                # 如果AI模式游戏页面未加载，显示错误信息
+                self.draw_background()
+                error_text = safe_render_text(self.info_font, "AI Game Module Loading Failed", RED)
+                error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+                self.screen.blit(error_text, error_rect)
+                
+                # 处理事件
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        return False
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        self.change_page(PageState.MAIN_MENU)
+                        return True
+                return True
+            
+            # 开始加载AI游戏页面
+            self._ai_game_loading = True
             self.draw_background()
-            error_text = safe_render_text(self.info_font, "AI Game Module Loading Failed", RED)
-            error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
-            self.screen.blit(error_text, error_rect)
+            loading_text = safe_render_text(self.info_font, "Loading AI Game Module...", YELLOW)
+            loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(loading_text, loading_rect)
+            pygame.display.flip()
+            
+            try:
+                # 在后台线程中加载AI游戏页面
+                self.ai_game_page = AIGamePage(self.screen)
+                self._ai_game_loading = False
+                print("AI游戏页面加载完成")
+            except Exception as e:
+                print(f"AI游戏页面加载失败: {e}")
+                self._ai_game_loading = False
+                self.change_page(PageState.MAIN_MENU)
+                return True
+        
+        # 如果还在加载中，显示加载提示
+        if self._ai_game_loading:
+            self.draw_background()
+            
+            # 显示加载文本
+            loading_text = safe_render_text(self.info_font, "Loading AI Game Module...", YELLOW)
+            loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(loading_text, loading_rect)
+            
+            # 显示加载进度条
+            progress_width = 400
+            progress_height = 20
+            progress_x = (SCREEN_WIDTH - progress_width) // 2
+            progress_y = 350
+            
+            # 绘制进度条背景
+            pygame.draw.rect(self.screen, GRAY, (progress_x, progress_y, progress_width, progress_height))
+            
+            # 绘制进度条（动画效果）
+            current_time = pygame.time.get_ticks()
+            progress = (current_time % 1000) / 1000.0  # 0到1之间的循环进度
+            progress_width_filled = int(progress_width * progress)
+            pygame.draw.rect(self.screen, GREEN, (progress_x, progress_y, progress_width_filled, progress_height))
+            
+            # 显示提示文本
+            tip_text = safe_render_text(self.small_font, "This may take a few seconds...", WHITE)
+            tip_rect = tip_text.get_rect(center=(SCREEN_WIDTH // 2, 380))
+            self.screen.blit(tip_text, tip_rect)
             
             # 处理事件
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return False
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self._ai_game_loading = False
                     self.change_page(PageState.MAIN_MENU)
                     return True
             return True
+        
+        # 如果这是第一次进入AI模式或从其他页面返回，重置游戏状态
+        if not hasattr(self, '_ai_mode_initialized') or not self._ai_mode_initialized:
+            # 显示加载提示
+            self.draw_background()
+            loading_text = safe_render_text(self.info_font, "Initializing AI Mode...", YELLOW)
+            loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(loading_text, loading_rect)
+            pygame.display.flip()
+            
+            try:
+                self.ai_game_page.reset_game()
+                self._ai_mode_initialized = True
+            except Exception as e:
+                print(f"AI模式初始化失败: {e}")
+                # 初始化失败，返回主菜单
+                self._ai_mode_initialized = False
+                self.change_page(PageState.MAIN_MENU)
+                return True
         
         # 如果这是第一次进入AI模式或从其他页面返回，重置游戏状态
         if not hasattr(self, '_ai_mode_initialized') or not self._ai_mode_initialized:

@@ -36,6 +36,14 @@ except ImportError as e:
     print(f"彩蛋模式游戏页面加载失败: {e}")
     EASTER_EGG_LOADED = False
 
+# 尝试导入AI模式游戏页面
+try:
+    from ai_game_page import AIGamePage
+    AI_GAME_LOADED = True
+except ImportError as e:
+    print(f"AI模式游戏页面加载失败: {e}")
+    AI_GAME_LOADED = False
+
 # 初始化pygame
 pygame.init()
 
@@ -164,11 +172,18 @@ class GameManager:
             self.easter_egg_page = EasterEggPage(screen)
         else:
             self.easter_egg_page = None
+            
+        # 初始化AI模式游戏页面
+        if AI_GAME_LOADED:
+            self.ai_game_page = AIGamePage(screen)
+        else:
+            self.ai_game_page = None
         
         # 初始化页面状态标志
         self._traditional_mode_initialized = False
         self._dual_mode_initialized = False
         self._easter_egg_mode_initialized = False
+        self._ai_mode_initialized = False
     
     def change_page(self, new_page):
         """切换页面"""
@@ -421,25 +436,43 @@ class GameManager:
     
     def handle_ai_mode(self):
         """处理AI模式页面"""
-        self.draw_background()
+        if not self.ai_game_page:
+            # 如果AI模式游戏页面未加载，显示错误信息
+            self.draw_background()
+            error_text = safe_render_text(self.info_font, "AI Game Module Loading Failed", RED)
+            error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(error_text, error_rect)
+            
+            # 处理事件
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.change_page(PageState.MAIN_MENU)
+                    return True
+            return True
         
-        # 绘制标题
-        title_text = safe_render_text(self.title_font, "AI Mode", WHITE)
-        title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
-        self.screen.blit(title_text, title_rect)
+        # 如果这是第一次进入AI模式或从其他页面返回，重置游戏状态
+        if not hasattr(self, '_ai_mode_initialized') or not self._ai_mode_initialized:
+            self.ai_game_page.reset_game()
+            self._ai_mode_initialized = True
         
-        # 绘制说明
-        text = safe_render_text(self.info_font, "AI Mode - Coming Soon...", WHITE)
-        rect = text.get_rect(center=(SCREEN_WIDTH // 2, 300))
-        self.screen.blit(text, rect)
-        
-        # 处理事件
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        # 运行AI模式游戏的一帧
+        try:
+            result = self.ai_game_page.run_one_frame()
+            if result == "quit":
+                self._ai_mode_initialized = False  # 标记需要重新初始化
                 self.change_page(PageState.MAIN_MENU)
                 return True
+            elif result == "game_over":
+                # 游戏结束，标记需要重新初始化
+                self._ai_mode_initialized = False
+                self.change_page(PageState.MAIN_MENU)
+                return True
+        except Exception as e:
+            print(f"AI模式游戏运行错误: {e}")
+            self._ai_mode_initialized = False
+            self.change_page(PageState.MAIN_MENU)
         
         return True
     

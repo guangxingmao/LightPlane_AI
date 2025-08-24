@@ -225,36 +225,45 @@ class CustomConfigPage:
             x = start_x + i * column_width
             y = 360  # 调整位置，在输入框下方
             
-            # Upload按钮 - 更好看的样式
+            # 计算输入框宽度用于居中计算
+            input_width = column_width - 80
+            
+            # 两个按钮的总宽度
+            total_button_width = 90 + 90 + 20  # 两个按钮宽度 + 间距
+            
+            # 计算按钮组的起始位置，使其在输入框内水平居中
+            buttons_start_x = x + (input_width - total_button_width) // 2
+            
+            # Upload按钮
             upload_button = {
-                'rect': pygame.Rect(x, y, 90, 35),
+                'rect': pygame.Rect(buttons_start_x, y, 90, 35),
                 'text': 'Upload',
                 'type': f'upload_{image_type}'
             }
             self.buttons[f'upload_{image_type}'] = upload_button
             
-            # AI Gen按钮
+            # AI Gen按钮 - 在upload按钮右侧
             ai_gen_button = {
-                'rect': pygame.Rect(x + 100, y, 90, 35),
+                'rect': pygame.Rect(buttons_start_x + 110, y, 90, 35),
                 'text': 'AI Gen',
                 'type': f'ai_gen_{image_type}'
             }
             self.buttons[f'ai_gen_{image_type}'] = ai_gen_button
         
-        # 顶部按钮 - 位置调整到页面上方
-        button_y = 80
+        # 顶部按钮 - 与标题垂直居中
+        button_y = 25  # 标题在Y=50，按钮高度50，所以从Y=25开始
         
-        # Back按钮 - 改进样式，放在左上角
+        # Back按钮 - 改进样式，放在左上角，小一号
         back_button = {
-            'rect': pygame.Rect(60, button_y, 140, 50),
-            'text': 'Back to Menu',
+            'rect': pygame.Rect(60, button_y, 120, 40),  # 从140x50改为120x40
+            'text': 'Back',
             'type': 'back'
         }
         self.buttons['back'] = back_button
         
-        # Complete按钮 - 改进样式，放在右上角
+        # Complete按钮 - 改进样式，放在右上角，小一号
         complete_button = {
-            'rect': pygame.Rect(self.width - 200, button_y, 140, 50),
+            'rect': pygame.Rect(self.width - 180, button_y, 120, 40),  # 从140x50改为120x40，位置也相应调整
             'text': 'Complete',
             'type': 'complete'
         }
@@ -610,22 +619,29 @@ class CustomConfigPage:
     def draw_input_boxes(self):
         """绘制输入框"""
         for i, input_box in enumerate(self.input_boxes):
-            # 绘制栏目标题
+            # 绘制栏目标题 - 与输入框水平居中
             title_text = self.text_font.render(input_box['title'], True, self.WHITE)
             title_rect = title_text.get_rect(
-                x=input_box['rect'].x,
+                centerx=input_box['rect'].centerx,  # 水平居中
                 y=input_box['rect'].y - 35
             )
             self.screen.blit(title_text, title_rect)
             
-            # 输入框背景 - 改进视觉效果
+            # 输入框背景 - 透明效果
             if input_box['active']:
-                # 活跃状态：白色背景，蓝色边框
-                pygame.draw.rect(self.screen, self.WHITE, input_box['rect'])
+                # 活跃状态：半透明白色背景，蓝色边框
+                transparent_white = (255, 255, 255, 128)  # 半透明白色
+                s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
+                s.set_alpha(128)
+                s.fill((255, 255, 255))
+                self.screen.blit(s, input_box['rect'])
                 pygame.draw.rect(self.screen, self.BLUE, input_box['rect'], 3)
             else:
-                # 非活跃状态：浅灰色背景，深灰色边框
-                pygame.draw.rect(self.screen, self.GRAY, input_box['rect'])
+                # 非活跃状态：半透明浅灰色背景，深灰色边框
+                s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
+                s.set_alpha(80)  # 更透明
+                s.fill((200, 200, 200))
+                self.screen.blit(s, input_box['rect'])
                 pygame.draw.rect(self.screen, self.DARK_GRAY, input_box['rect'], 2)
             
             # 输入框文字
@@ -727,8 +743,11 @@ class CustomConfigPage:
             size = preview['size']
             preview_size = preview.get('preview_size', (size[0] * 3, size[1] * 3))
             
-            # 预览框背景
-            pygame.draw.rect(self.screen, self.GRAY, rect)
+            # 预览框背景 - 透明效果
+            s = pygame.Surface((rect.width, rect.height))
+            s.set_alpha(100)  # 半透明
+            s.fill((150, 150, 150))
+            self.screen.blit(s, rect)
             pygame.draw.rect(self.screen, self.BLACK, rect, 2)
             
             # 预览图片
@@ -740,7 +759,7 @@ class CustomConfigPage:
                 image_rect = scaled_image.get_rect(center=rect.center)
                 self.screen.blit(scaled_image, image_rect)
             else:
-                # 显示"No Image"
+                # 显示"No Image" - 无背景色
                 no_image_text = self.text_font.render("No Image", True, self.DARK_GRAY)
                 no_image_rect = no_image_text.get_rect(center=rect.center)
                 self.screen.blit(no_image_text, no_image_rect)

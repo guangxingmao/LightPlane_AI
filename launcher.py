@@ -231,7 +231,7 @@ class GameManager:
             Button(center_x, 280, button_width, button_height, "Dual Player Mode", GREEN, (0, 200, 0)),
             Button(center_x, 360, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
             Button(center_x, 440, button_width, button_height, "Custom Mode", RED, (200, 0, 0)),
-            Button(center_x, 520, button_width, button_height, "Easter Egg Mode", (255, 20, 147), (255, 105, 180))
+            # Button(center_x, 520, button_width, button_height, "Easter Egg Mode", (255, 20, 147), (255, 105, 180))
         ]
         
         # 绘制主菜单

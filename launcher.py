@@ -615,6 +615,74 @@ class GameManager:
             return True
         
         return True
+    
+    def handle_custom_mode_with_cache(self):
+        """处理自定义模式页面 - 保留缓存"""
+        # 重新初始化配置页面，但保留缓存
+        try:
+            from custom_config_page import CustomConfigPage
+            print("🔄 重新初始化自定义配置页面（保留缓存）...")
+            
+            # 如果已有配置页面实例，保留其缓存
+            if hasattr(self, 'custom_config_page') and self.custom_config_page:
+                old_cache = getattr(self.custom_config_page, 'config_cache', {})
+                self.custom_config_page = CustomConfigPage(self.screen, SCREEN_WIDTH, SCREEN_HEIGHT)
+                self.custom_config_page.initialize_config(preserve_cache=True)
+                self.custom_config_page.config_cache = old_cache
+                print("💾 配置缓存已保留")
+            else:
+                self.custom_config_page = CustomConfigPage(self.screen, SCREEN_WIDTH, SCREEN_HEIGHT)
+                print("🆕 新建配置页面")
+                
+            print("✅ 自定义配置页面加载成功")
+        except Exception as e:
+            print(f"❌ 自定义配置页面加载失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 显示错误信息
+            self.draw_background()
+            error_text = safe_render_text(self.info_font, f"Custom Mode Loading Failed: {e}", RED)
+            error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
+            self.screen.blit(error_text, error_rect)
+            
+            # 处理事件
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.change_page(PageState.MAIN_MENU)
+                    return True
+            return True
+        
+        # 运行自定义配置页面
+        try:
+            result = self.custom_config_page.run()
+            print(f"自定义配置页面返回结果: {result}")  # 调试信息
+            
+            if result == 'back':
+                # 返回主菜单时清除配置页面缓存
+                if hasattr(self, 'custom_config_page'):
+                    self.custom_config_page.clear_cache()
+                    print("✅ 配置页面缓存已清除")
+                self.change_page(PageState.MAIN_MENU)
+                return True
+            elif isinstance(result, dict) and result.get('type') == 'custom_game':
+                # 跳转到自定义游戏页面
+                print(f"跳转到自定义游戏页面，配置: {result['config']}")
+                return self.handle_custom_game(result['config'])
+            elif result == 'quit':
+                return False
+            else:
+                print(f"未知的返回结果: {result}")
+                return True
+        except Exception as e:
+            print(f"自定义配置页面运行错误: {e}")
+            import traceback
+            traceback.print_exc()
+            self.change_page(PageState.MAIN_MENU)
+            return True
+        
+        return True
         
     def handle_custom_game(self, custom_config):
         """处理自定义游戏页面"""
@@ -648,11 +716,11 @@ class GameManager:
         try:
             result = self.custom_game_page.run()
             if result == 'back':
-                # 返回自定义配置页面时清除游戏页面缓存
+                # 返回自定义配置页面时清除游戏页面缓存，但保留配置页面缓存
                 if hasattr(self, 'custom_game_page'):
                     self.custom_game_page.clear_game_cache()
                     print("✅ 游戏页面缓存已清除")
-                return self.handle_custom_mode()
+                return self.handle_custom_mode_with_cache()
             elif result == 'quit':
                 return False
         except Exception as e:

@@ -22,8 +22,8 @@ class CustomConfigPage:
         # 初始化配置
         self.initialize_config()
     
-    def initialize_config(self):
-        """初始化配置页面 - 每次进入时都重新初始化"""
+    def initialize_config(self, preserve_cache=False):
+        """初始化配置页面"""
         print("🔄 初始化自定义配置页面...")
         
         # 字体
@@ -54,12 +54,16 @@ class CustomConfigPage:
             'background': 'space background, stars, cosmic, size 480x700 pixels'
         }
         
-        # 重置配置缓存
-        self.config_cache = {
-            'player_plane': None,
-            'enemy_plane': None,
-            'background': None
-        }
+        # 保留或重置配置缓存
+        if not preserve_cache or not hasattr(self, 'config_cache'):
+            self.config_cache = {
+                'player_plane': None,
+                'enemy_plane': None,
+                'background': None
+            }
+            print("🗑️ 配置缓存已重置")
+        else:
+            print("💾 保留现有配置缓存")
         
         # 重置输入框
         self.input_boxes = []
@@ -90,10 +94,27 @@ class CustomConfigPage:
         # 创建UI元素
         self.create_ui_elements()
         
+        # 恢复预览图片（如果保留缓存）
+        if preserve_cache and hasattr(self, 'config_cache'):
+            self.restore_preview_images()
+        
         # 加载背景
         self.background = self.load_background()
         
         print("✅ 自定义配置页面初始化完成")
+    
+    def restore_preview_images(self):
+        """恢复预览图片到预览区域"""
+        print("🔄 恢复预览图片...")
+        for image_type, cached_image in self.config_cache.items():
+            if cached_image and image_type in self.preview_areas:
+                # 使用保存的预览尺寸
+                preview_size = self.preview_areas[image_type].get('preview_size', (512, 512))
+                
+                # 缩放到预览尺寸
+                preview_image = pygame.transform.scale(cached_image, preview_size)
+                self.preview_areas[image_type]['image'] = preview_image
+                print(f"✅ 恢复 {image_type} 预览图片，预览尺寸: {preview_size}")
     
     def load_background(self):
         """加载背景图片"""
@@ -171,14 +192,19 @@ class CustomConfigPage:
             x = start_x + i * column_width
             y = 460  # 调整位置，在按钮下方
             
-            # 预览区域，调整大小
-            preview_width = min(column_width - 80, 180)
-            preview_height = 140
-            preview_rect = pygame.Rect(x, y, preview_width, preview_height)
+            # 预览区域大小与preview尺寸一致（3倍目标尺寸）
+            preview_size = (size[0] * 3, size[1] * 3)
+            
+            # 计算预览框位置，使其与输入框水平居中
+            input_width = column_width - 80  # 输入框宽度
+            preview_x = x + (input_width - preview_size[0]) // 2  # 水平居中
+            
+            preview_rect = pygame.Rect(preview_x, y, preview_size[0], preview_size[1])
             self.preview_areas[image_type] = {
                 'rect': preview_rect,
                 'image': None,
-                'size': size
+                'size': size,
+                'preview_size': preview_size  # 保存预览尺寸信息
             }
     
     def create_buttons(self):
@@ -230,7 +256,9 @@ class CustomConfigPage:
         """处理事件"""
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # 左键点击
-                self.handle_click(event.pos)
+                result = self.handle_click(event.pos)
+                if result:
+                    return result
         
         elif event.type == pygame.KEYDOWN:
             if self.selected_input is not None:
@@ -274,6 +302,8 @@ class CustomConfigPage:
                             self.input_boxes[self.selected_input]['text'] = test_text
                     
                 self.force_redraw = True
+        
+        return None
     
     def handle_click(self, pos):
         """处理点击事件"""
@@ -281,17 +311,18 @@ class CustomConfigPage:
         for i, input_box in enumerate(self.input_boxes):
             if input_box['rect'].collidepoint(pos):
                 self.select_input(i)
-                return
+                return None
         
         # 检查按钮点击
         for button in self.buttons.values():
             if button['rect'].collidepoint(pos):
-                self.handle_button_click(button['type'])
-                return
+                result = self.handle_button_click(button['type'])
+                return result
         
         # 点击其他地方，取消选择
         self.selected_input = None
         self.force_redraw = True
+        return None
     
     def select_input(self, index):
         """选择输入框"""
@@ -305,7 +336,7 @@ class CustomConfigPage:
         if button_type == 'back':
             print("🔄 点击Back按钮，清除缓存并返回主菜单")
             self.clear_cache()
-            return 'main_menu'
+            return 'back'
         
         elif button_type == 'complete':
             print("✅ 点击Complete按钮，返回配置信息")
@@ -415,10 +446,18 @@ class CustomConfigPage:
                     else:
                         scaled_image = image
                     
-                    # 更新预览
-                    self.preview_areas[image_type]['image'] = scaled_image
-                    # 更新配置缓存
+                    # 更新预览区域（缩放到预览尺寸）
+                    if image_type in self.preview_areas:
+                        # 获取预览尺寸（3倍目标尺寸）
+                        preview_size = (target_size[0] * 3, target_size[1] * 3)
+                        preview_image = pygame.transform.scale(scaled_image, preview_size)
+                        self.preview_areas[image_type]['image'] = preview_image
+                        print(f"✅ 更新AI预览区域: {image_type}，预览尺寸: {preview_size}")
+                    
+                    # 更新配置缓存（保存目标尺寸的图片）
                     self.config_cache[image_type] = scaled_image
+                    print(f"✅ 更新AI配置缓存: {image_type}，目标尺寸: {target_size}")
+                    
                     self.show_status(f"{image_type} AI生成成功！", self.GREEN)
                 else:
                     self.show_status(f"{image_type} AI生成失败", self.RED)
@@ -505,14 +544,17 @@ class CustomConfigPage:
             scaled_image = pygame.transform.scale(image, target_size)
             print(f"✅ 图片已缩放至目标尺寸: {target_size}")
             
-            # 更新预览区域
+            # 更新预览区域（缩放到预览尺寸）
             if image_type in self.preview_areas:
-                self.preview_areas[image_type]['image'] = scaled_image
-                print(f"✅ 更新预览区域: {image_type}")
+                # 获取预览尺寸（3倍目标尺寸）
+                preview_size = (target_size[0] * 3, target_size[1] * 3)
+                preview_image = pygame.transform.scale(scaled_image, preview_size)
+                self.preview_areas[image_type]['image'] = preview_image
+                print(f"✅ 更新预览区域: {image_type}，预览尺寸: {preview_size}")
             
-            # 更新配置缓存
+            # 更新配置缓存（保存目标尺寸的图片）
             self.config_cache[image_type] = scaled_image
-            print(f"✅ 更新配置缓存: {image_type}")
+            print(f"✅ 更新配置缓存: {image_type}，目标尺寸: {target_size}")
             
             # 显示成功消息
             self.show_status(f"{image_type} 上传成功！", self.GREEN)
@@ -675,6 +717,7 @@ class CustomConfigPage:
         for image_type, preview in self.preview_areas.items():
             rect = preview['rect']
             size = preview['size']
+            preview_size = preview.get('preview_size', (size[0] * 3, size[1] * 3))
             
             # 预览框背景
             pygame.draw.rect(self.screen, self.GRAY, rect)
@@ -682,12 +725,8 @@ class CustomConfigPage:
             
             # 预览图片
             if preview['image']:
-                # 计算预览尺寸（放大3倍）
-                preview_width = size[0] * 3
-                preview_height = size[1] * 3
-                
-                # 缩放图片
-                scaled_image = pygame.transform.scale(preview['image'], (preview_width, preview_height))
+                # 使用保存的预览尺寸
+                scaled_image = pygame.transform.scale(preview['image'], preview_size)
                 
                 # 居中显示
                 image_rect = scaled_image.get_rect(center=rect.center)
@@ -708,7 +747,7 @@ class CustomConfigPage:
             self.screen.blit(size_surface, size_rect)
             
             # 显示预览尺寸
-            preview_text = f"Preview: {size[0]*3}x{size[1]*3}"
+            preview_text = f"Preview: {preview_size[0]}x{preview_size[1]}"
             preview_surface = self.small_font.render(preview_text, True, self.WHITE)
             preview_rect = preview_surface.get_rect(
                 x=rect.x,

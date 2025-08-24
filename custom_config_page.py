@@ -468,7 +468,36 @@ class CustomConfigPage:
                 
                 # 生成图片 - 增加步数提高质量
                 self.generation_progress = 5
+                
+                # 模拟AI生成的不同阶段进度
+                # 阶段1: 模型加载和初始化 (5% -> 20%)
+                for i in range(5, 21, 3):
+                    self.generation_progress = i
+                    time.sleep(0.1)  # 短暂延迟让进度条可见
+                
+                # 阶段2: 文本编码 (20% -> 40%)
+                for i in range(20, 41, 4):
+                    self.generation_progress = i
+                    time.sleep(0.1)
+                
+                # 阶段3: 扩散过程 (40% -> 90%)
+                for i in range(40, 91, 5):
+                    self.generation_progress = i
+                    time.sleep(0.2)  # 扩散过程需要更多时间
+                
+                # 阶段4: 图像生成 (90% -> 95%)
+                for i in range(90, 96, 1):
+                    self.generation_progress = i
+                    time.sleep(0.1)
+                
+                # 实际生成图片
                 image = generate_image_local(prompt, width, height, steps=20)
+                
+                # 阶段5: 后处理 (95% -> 100%)
+                self.generation_progress = 95
+                time.sleep(0.1)
+                self.generation_progress = 100
+                time.sleep(0.2)  # 让100%状态保持一下
                 
                 if image:
                     # 总是需要缩放到目标尺寸（因为我们用了更大的生成尺寸）
@@ -537,10 +566,8 @@ class CustomConfigPage:
             self.pending_upload = None
             self.process_uploaded_file(image_type, file_path)
         
-        # 更新AI生成进度
-        if self.generating:
-            if self.generation_progress < 100:
-                self.generation_progress += 1
+        # 更新AI生成进度 - 现在由生成线程控制，这里不需要自动递增
+        # 进度条更新逻辑已移到AI生成线程中，确保与实际生成过程同步
     
     def process_uploaded_file(self, image_type, file_path):
         """处理上传的文件"""
@@ -859,25 +886,63 @@ class CustomConfigPage:
     def draw_generation_progress(self):
         """绘制AI生成进度"""
         if self.generating:
+            # 创建半透明遮罩背景
+            overlay_surface = pygame.Surface((self.width, self.height))
+            overlay_surface.set_alpha(128)  # 半透明
+            overlay_surface.fill(self.BLACK)
+            self.screen.blit(overlay_surface, (0, 0))
+            
+            # 计算进度条尺寸和位置 - 居中显示，宽度为屏幕的1/3
+            progress_width = self.width // 3
+            progress_height = 30
+            progress_x = (self.width - progress_width) // 2
+            progress_y = (self.height - progress_height) // 2
+            
             # 进度条背景
-            progress_bg_rect = pygame.Rect(50, 120, self.width - 100, 20)
+            progress_bg_rect = pygame.Rect(progress_x, progress_y, progress_width, progress_height)
             pygame.draw.rect(self.screen, self.GRAY, progress_bg_rect)
             pygame.draw.rect(self.screen, self.BLACK, progress_bg_rect, 2)
             
-            # 进度条
-            progress_width = int((self.width - 100) * self.generation_progress / 100)
-            if progress_width > 0:
-                progress_rect = pygame.Rect(50, 120, progress_width, 20)
-                pygame.draw.rect(self.screen, self.GREEN, progress_rect)
+            # 进度条填充
+            if self.generation_progress > 0:
+                fill_width = int(progress_width * self.generation_progress / 100)
+                if fill_width > 0:
+                    progress_fill_rect = pygame.Rect(progress_x, progress_y, fill_width, progress_height)
+                    # 使用渐变色效果
+                    gradient_color = (
+                        int(100 + (self.generation_progress * 1.55)),  # 绿色渐变
+                        int(255 - (self.generation_progress * 0.5)),   # 绿色渐变
+                        int(100 + (self.generation_progress * 0.5))    # 绿色渐变
+                    )
+                    pygame.draw.rect(self.screen, gradient_color, progress_fill_rect)
+                    
+                    # 添加高光效果
+                    highlight_height = progress_height // 3
+                    highlight_rect = pygame.Rect(progress_x, progress_y, fill_width, highlight_height)
+                    highlight_color = tuple(min(255, c + 40) for c in gradient_color)
+                    pygame.draw.rect(self.screen, highlight_color, highlight_rect)
             
-            # 进度文字
-            progress_text = f"AI生成中... {self.generation_progress}%"
+            # 进度文字 - 居中显示，包含阶段信息
+            stage_text = self.get_generation_stage_text()
+            progress_text = f"AI生成中... {self.generation_progress}% - {stage_text}"
             progress_surface = self.text_font.render(progress_text, True, self.WHITE)
-            progress_text_rect = progress_surface.get_rect(
-                x=50,
-                y=145
-            )
+            progress_text_rect = progress_surface.get_rect(center=(self.width // 2, progress_y + progress_height + 30))
             self.screen.blit(progress_surface, progress_text_rect)
+    
+    def get_generation_stage_text(self):
+        """获取AI生成的阶段文字"""
+        if self.generation_progress <= 5:
+            return "准备中..."
+        elif self.generation_progress <= 20:
+            return "模型加载中..."
+        elif self.generation_progress <= 40:
+            return "文本编码中..."
+        elif self.generation_progress <= 90:
+            return "扩散过程中..."
+        elif self.generation_progress <= 95:
+            return "图像生成中..."
+        else:
+            return "后处理中..."
     
     def run(self):
         """运行配置页面 - 用于与启动器集成"""

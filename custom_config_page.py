@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-自定义配置页面 - 支持图片上传和AI生成
+Custom Configuration Page - Supports image upload and AI generation
 """
 
 import pygame
@@ -19,19 +19,19 @@ class CustomConfigPage:
         else:
             self.width, self.height = screen.get_size()
         
-        # 初始化配置
+        # Initialize configuration
         self.initialize_config()
     
     def initialize_config(self, preserve_cache=False):
-        """初始化配置页面"""
-        print("🔄 初始化自定义配置页面...")
+        """Initialize configuration page"""
+        print("Initializing custom configuration page...")
         
-        # 字体
+        # Fonts
         self.title_font = pygame.font.Font(None, 48)
         self.text_font = pygame.font.Font(None, 32)
         self.small_font = pygame.font.Font(None, 24)
         
-        # 颜色
+        # Colors
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
         self.BLUE = (100, 150, 255)
@@ -40,84 +40,84 @@ class CustomConfigPage:
         self.GRAY = (200, 200, 200)
         self.DARK_GRAY = (100, 100, 100)
         
-        # 传统模式图片尺寸 - 修正为实际图片尺寸
+        # Traditional mode image sizes - corrected to actual image sizes
         self.TRADITIONAL_SIZES = {
-            'player_plane': (57, 46),    # life.png 实际尺寸（玩家生命值图标）
-            'enemy_plane': (43, 57),     # enemy1.png 实际尺寸
-            'background': (700, 480)     # background.png 实际尺寸
+            'player_plane': (57, 46),    # life.png actual size (player life icon)
+            'enemy_plane': (43, 57),     # enemy1.png actual size
+            'background': (700, 480)     # background.png actual size
         }
         
-        # 默认提示词 - 简单直接，强调高清完整飞机
+        # Default prompts - simple and direct, emphasizing high-resolution complete aircraft
         self.default_prompts = {
             'player_plane': 'airplane, high resolution, complete aircraft, full plane',
             'enemy_plane': 'airplane, high resolution, complete aircraft, full plane',
             'background': 'space, stars, high resolution'
         }
         
-        # 保留或重置配置缓存
+        # Preserve or reset configuration cache
         if not preserve_cache or not hasattr(self, 'config_cache'):
             self.config_cache = {
                 'player_plane': None,
                 'enemy_plane': None,
                 'background': None
             }
-            print("🗑️ 配置缓存已重置")
+            print("Configuration cache reset")
         else:
-            print("💾 保留现有配置缓存")
+            print("Preserving existing configuration cache")
         
-        # 重置输入框
+        # Reset input boxes
         self.input_boxes = []
         self.selected_input = None
         
-        # 重置预览区域
+        # Reset preview areas
         self.preview_areas = {}
         
-        # 重置按钮
+        # Reset buttons
         self.buttons = {}
         
-        # 重置状态信息
+        # Reset status information
         self.status_message = ""
         self.status_color = self.GREEN
-        self.show_status_flag = False  # 改名避免与方法冲突
+        self.show_status_flag = False  # Renamed to avoid conflict with method
         self.status_timer = 0
         
-        # 重置AI生成状态
+        # Reset AI generation status
         self.generating = False
         self.generation_progress = 0
         
-        # 重置待上传文件
+        # Reset pending upload file
         self.pending_upload = None
         
-        # 重置强制重绘标志
+        # Reset force redraw flag
         self.force_redraw = False
         
-        # 创建UI元素
+        # Create UI elements
         self.create_ui_elements()
         
-        # 恢复预览图片（如果保留缓存）
+        # Restore preview images (if cache preserved)
         if preserve_cache and hasattr(self, 'config_cache'):
             self.restore_preview_images()
         
-        # 加载背景
+        # Load background
         self.background = self.load_background()
         
-        print("✅ 自定义配置页面初始化完成")
+        print("Custom configuration page initialization completed")
     
     def restore_preview_images(self):
-        """恢复预览图片到预览区域"""
-        print("🔄 恢复预览图片...")
+        """Restore preview images to preview areas"""
+        print("Restoring preview images...")
         for image_type, cached_image in self.config_cache.items():
             if cached_image and image_type in self.preview_areas:
-                # 使用保存的预览尺寸
+                # Use saved preview size
                 preview_size = self.preview_areas[image_type].get('preview_size', (512, 512))
                 
-                # 缩放到预览尺寸
+                # Scale to preview size
                 preview_image = pygame.transform.smoothscale(cached_image, preview_size)
                 self.preview_areas[image_type]['image'] = preview_image
-                print(f"✅ 恢复 {image_type} 预览图片，预览尺寸: {preview_size}")
+                print(f"Restored {image_type} preview image, preview size: {preview_size}")
     
     def load_background(self):
-        """加载背景图片"""
+        """Load background image"""
         try:
             bg_path = os.path.join('images', 'background.png')
             if os.path.exists(bg_path):
@@ -129,39 +129,39 @@ class CustomConfigPage:
             return None
     
     def create_ui_elements(self):
-        """创建UI元素"""
-        # 创建输入框
+        """Create UI elements"""
+        # Create input boxes
         self.create_input_boxes()
         
-        # 创建预览区域
+        # Create preview areas
         self.create_preview_areas()
         
-        # 创建按钮
+        # Create buttons
         self.create_buttons()
     
     def create_input_boxes(self):
-        """创建输入框"""
+        """Create input boxes"""
         self.input_boxes = []
         
-        # 输入框高度 - 确保能容纳4行文字
-        line_height = 32  # 文字行高
-        input_height = line_height * 4 + 20  # 4行文字 + 上下边距
+        # Input box height - ensure it can accommodate 4 lines of text
+        line_height = 32  # Text line height
+        input_height = line_height * 4 + 20  # 4 lines of text + top and bottom margins
         
-        # 三栏布局，改进间距
-        column_width = (self.width - 120) // 3  # 留出更多边距
+        # Three-column layout, improved spacing
+        column_width = (self.width - 120) // 3  # Leave more margins
         start_x = 60
         
-        # 栏目标题
+        # Column titles
         titles = ['Player Plane', 'Enemy Plane', 'Background']
         
         for i, (image_type, prompt) in enumerate(self.default_prompts.items()):
             x = start_x + i * column_width
-            y = 200  # 调整Y位置，为标题和按钮留出空间
+            y = 200  # Adjust Y position to leave space for titles and buttons
             
-            # 输入框宽度调整
+            # Input box width adjustment
             input_width = column_width - 80
             
-            # 输入框
+            # Input box
             input_box = {
                 'rect': pygame.Rect(x, y, input_width, input_height),
                 'text': '',
@@ -172,7 +172,7 @@ class CustomConfigPage:
             }
             self.input_boxes.append(input_box)
             
-            # 清除按钮位置调整
+            # Clear button position adjustment
             clear_button = {
                 'rect': pygame.Rect(x + input_width + 10, y + (input_height - 30) // 2, 60, 30),
                 'text': 'Clear',
@@ -181,60 +181,60 @@ class CustomConfigPage:
             self.buttons[f'clear_{image_type}'] = clear_button
     
     def create_preview_areas(self):
-        """创建预览区域"""
+        """Create preview areas"""
         self.preview_areas = {}
         
-        # 三栏布局，与输入框保持一致
+        # Three-column layout, consistent with input boxes
         column_width = (self.width - 120) // 3
         start_x = 60
         
         for i, (image_type, size) in enumerate(self.TRADITIONAL_SIZES.items()):
             x = start_x + i * column_width
-            y = 460  # 调整位置，在按钮下方
+            y = 460  # Adjust position, below buttons
             
-            # 预览区域大小与preview尺寸一致
-            # 对于background，使用较小的预览尺寸以避免过大
+            # Preview area size matches preview size
+            # For background, use smaller preview size to avoid being too large
             if image_type == 'background':
-                # background使用较小的预览尺寸，保持宽高比
-                max_preview_width = 200  # 最大预览宽度
+                # Background uses smaller preview size, maintaining aspect ratio
+                max_preview_width = 200  # Maximum preview width
                 scale_factor = max_preview_width / size[0]
                 preview_size = (int(size[0] * scale_factor), int(size[1] * scale_factor))
             else:
-                # 其他图片使用3倍目标尺寸
+                # Other images use 3x target size
                 preview_size = (size[0] * 3, size[1] * 3)
             
-            # 计算预览框位置，使其与输入框水平居中
-            input_width = column_width - 80  # 输入框宽度
-            preview_x = x + (input_width - preview_size[0]) // 2  # 水平居中
+            # Calculate preview box position to center it horizontally with input box
+            input_width = column_width - 80  # Input box width
+            preview_x = x + (input_width - preview_size[0]) // 2  # Horizontal center
             
             preview_rect = pygame.Rect(preview_x, y, preview_size[0], preview_size[1])
             self.preview_areas[image_type] = {
                 'rect': preview_rect,
                 'image': None,
                 'size': size,
-                'preview_size': preview_size  # 保存预览尺寸信息
+                'preview_size': preview_size  # Save preview size information
             }
     
     def create_buttons(self):
-        """创建按钮"""
-        # 三栏布局，与输入框保持一致
+        """Create buttons"""
+        # Three-column layout, consistent with input boxes
         column_width = (self.width - 120) // 3
         start_x = 60
         
         for i, image_type in enumerate(self.default_prompts.keys()):
             x = start_x + i * column_width
-            y = 360  # 调整位置，在输入框下方
+            y = 360  # Adjust position, below input box
             
-            # 计算输入框宽度用于居中计算
+            # Calculate input box width for centering calculation
             input_width = column_width - 80
             
-            # 两个按钮的总宽度
-            total_button_width = 90 + 90 + 20  # 两个按钮宽度 + 间距
+            # Total width of two buttons
+            total_button_width = 90 + 90 + 20  # Two button widths + spacing
             
-            # 计算按钮组的起始位置，使其在输入框内水平居中
+            # Calculate the starting position of button group to center it horizontally within input box
             buttons_start_x = x + (input_width - total_button_width) // 2
             
-            # Upload按钮
+            # Upload button
             upload_button = {
                 'rect': pygame.Rect(buttons_start_x, y, 90, 35),
                 'text': 'Upload',
@@ -242,7 +242,7 @@ class CustomConfigPage:
             }
             self.buttons[f'upload_{image_type}'] = upload_button
             
-            # AI Gen按钮 - 在upload按钮右侧
+            # AI Gen button - to the right of upload button
             ai_gen_button = {
                 'rect': pygame.Rect(buttons_start_x + 110, y, 90, 35),
                 'text': 'AI Gen',
@@ -250,29 +250,29 @@ class CustomConfigPage:
             }
             self.buttons[f'ai_gen_{image_type}'] = ai_gen_button
         
-        # 顶部按钮 - 与标题垂直居中
-        button_y = 25  # 标题在Y=50，按钮高度50，所以从Y=25开始
+        # Top buttons - vertically centered with title
+        button_y = 25  # Title at Y=50, button height 50, so start from Y=25
         
-        # Back按钮 - 改进样式，放在左上角，小一号
+        # Back button - improved style, placed in top-left corner, smaller size
         back_button = {
-            'rect': pygame.Rect(60, button_y, 120, 40),  # 从140x50改为120x40
+            'rect': pygame.Rect(60, button_y, 120, 40),  # Changed from 140x50 to 120x40
             'text': 'Back',
             'type': 'back'
         }
         self.buttons['back'] = back_button
         
-        # Complete按钮 - 改进样式，放在右上角，小一号
+        # Complete button - improved style, placed in top-right corner, smaller size
         complete_button = {
-            'rect': pygame.Rect(self.width - 180, button_y, 120, 40),  # 从140x50改为120x40，位置也相应调整
+            'rect': pygame.Rect(self.width - 180, button_y, 120, 40),  # Changed from 140x50 to 120x40, position adjusted accordingly
             'text': 'Complete',
             'type': 'complete'
         }
         self.buttons['complete'] = complete_button
     
     def handle_event(self, event):
-        """处理事件"""
+        """Handle events"""
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # 左键点击
+            if event.button == 1:  # Left click
                 result = self.handle_click(event.pos)
                 if result:
                     return result
@@ -284,36 +284,36 @@ class CustomConfigPage:
                 elif event.key == pygame.K_BACKSPACE:
                     self.input_boxes[self.selected_input]['text'] = self.input_boxes[self.selected_input]['text'][:-1]
                 else:
-                    # 智能输入处理，支持换行
+                    # Smart input handling, supports line breaks
                     current_text = self.input_boxes[self.selected_input]['text']
                     new_char = event.unicode
                     
-                    # 如果按了回车键，添加换行符
+                    # If Enter key is pressed, add line break
                     if event.unicode == '\r':
                         new_char = '\n'
                     
-                    # 计算添加新字符后的文字
+                    # Calculate text after adding new character
                     test_text = current_text + new_char
                     
-                    # 检查是否需要换行
+                    # Check if line break is needed
                     if new_char == '\n':
-                        # 换行符直接添加
+                        # Line break directly added
                         self.input_boxes[self.selected_input]['text'] = test_text
                     else:
-                        # 检查当前行是否会超出宽度
+                        # Check if current line will exceed width
                         lines = test_text.split('\n')
-                        current_line = lines[-1]  # 当前行
+                        current_line = lines[-1]  # Current line
                         
-                        # 计算当前行的宽度
+                        # Calculate current line width
                         line_surface = self.text_font.render(current_line, True, self.BLACK)
                         line_width = line_surface.get_width()
                         
-                        # 如果当前行超出宽度，自动换行
+                        # If current line exceeds width, auto-wrap
                         if line_width > self.input_boxes[self.selected_input]['rect'].width - 20:
-                            # 自动换行
+                            # Auto-wrap
                             test_text = current_text + '\n' + new_char
                         
-                        # 检查总行数是否超过4行
+                        # Check if total lines exceed 4
                         total_lines = len(test_text.split('\n'))
                         if total_lines <= 4:
                             self.input_boxes[self.selected_input]['text'] = test_text
@@ -323,42 +323,42 @@ class CustomConfigPage:
         return None
     
     def handle_click(self, pos):
-        """处理点击事件"""
-        # 检查输入框点击
+        """Handle click events"""
+        # Check input box clicks
         for i, input_box in enumerate(self.input_boxes):
             if input_box['rect'].collidepoint(pos):
                 self.select_input(i)
                 return None
         
-        # 检查按钮点击
+        # Check button clicks
         for button in self.buttons.values():
             if button['rect'].collidepoint(pos):
                 result = self.handle_button_click(button['type'])
                 return result
         
-        # 点击其他地方，取消选择
+        # Click elsewhere, cancel selection
         self.selected_input = None
         self.force_redraw = True
         return None
     
     def select_input(self, index):
-        """选择输入框"""
+        """Select input box"""
         self.selected_input = index
         for i, input_box in enumerate(self.input_boxes):
             input_box['active'] = (i == index)
         self.force_redraw = True
     
     def handle_button_click(self, button_type):
-        """处理按钮点击"""
+        """Handle button clicks"""
         if button_type == 'back':
-            print("🔄 点击Back按钮，清除缓存并返回主菜单")
+            print("Clicked Back button, clearing cache and returning to main menu")
             self.clear_cache()
             return 'back'
         
         elif button_type == 'complete':
-            print("✅ 点击Complete按钮，返回配置信息")
+            print("Clicked Complete button, returning configuration information")
             config = self.get_config()
-            print(f"📋 当前配置: {config}")
+            print(f"Current configuration: {config}")
             return {
                 'type': 'custom_game',
                 'config': config
@@ -366,21 +366,21 @@ class CustomConfigPage:
         
         elif button_type.startswith('upload_'):
             image_type = button_type.replace('upload_', '')
-            print(f"📁 点击Upload按钮: {image_type}")
+            print(f"Clicked Upload button: {image_type}")
             self.start_upload(image_type)
         
         elif button_type.startswith('ai_gen_'):
             image_type = button_type.replace('ai_gen_', '')
-            print(f"🎨 点击AI Gen按钮: {image_type}")
+            print(f"Clicked AI Gen button: {image_type}")
             self.start_ai_generation(image_type)
         
         elif button_type.startswith('clear_'):
             image_type = button_type.replace('clear_', '')
-            print(f"🧹 点击Clear按钮: {image_type}")
+            print(f"Clicked Clear button: {image_type}")
             self.clear_input_text(image_type)
     
     def clear_input_text(self, image_type):
-        """清除输入框文字"""
+        """Clear input box text"""
         for input_box in self.input_boxes:
             if input_box['type'] == image_type:
                 input_box['text'] = ''
@@ -388,37 +388,37 @@ class CustomConfigPage:
                 break
     
     def start_upload(self, image_type):
-        """开始上传"""
-        print(f"🔄 开始上传 {image_type} 图片...")
+        """Start upload"""
+        print(f"Starting upload of {image_type} image...")
         
         def upload_thread():
             try:
-                # 显示上传中状态
-                self.show_status(f"正在选择 {image_type} 图片...", self.BLUE)
+                # Show upload status
+                self.show_status(f"Selecting {image_type} image...", self.BLUE)
                 
-                # 调用文件选择器
+                # Call file selector
                 file_path = select_file(image_type)
                 
                 if file_path and os.path.exists(file_path):
-                    print(f"✅ 选择文件: {file_path}")
+                    print(f"Selected file: {file_path}")
                     self.pending_upload = (image_type, file_path)
                 else:
                     if file_path:
-                        print(f"❌ 文件不存在: {file_path}")
-                        self.show_status(f"文件不存在: {file_path}", self.RED)
+                        print(f"File does not exist: {file_path}")
+                        self.show_status(f"File does not exist: {file_path}", self.RED)
                     else:
-                        print("ℹ️ 用户取消了文件选择")
-                        self.show_status("已取消文件选择", self.BLUE)
+                        print("User cancelled file selection")
+                        self.show_status("File selection cancelled", self.BLUE)
                         
             except Exception as e:
-                print(f"❌ 上传失败: {e}")
-                self.show_status(f"上传失败: {str(e)}", self.RED)
+                print(f"Upload failed: {e}")
+                self.show_status(f"Upload failed: {str(e)}", self.RED)
         
-        # 启动上传线程
+        # Start upload thread
         threading.Thread(target=upload_thread, daemon=True).start()
     
     def start_ai_generation(self, image_type):
-        """开始AI生成"""
+        """Start AI generation"""
         if self.generating:
             return
         
@@ -427,14 +427,14 @@ class CustomConfigPage:
         
         def generation_thread():
             try:
-                # 获取用户输入
+                # Get user input
                 user_input = ""
                 for input_box in self.input_boxes:
                     if input_box['type'] == image_type:
                         user_input = input_box['text'].strip()
                         break
                 
-                # 构建提示词 - 包含target尺寸的8倍信息
+                # Build prompt - includes 8x target size information
                 target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
                 target_width, target_height = target_size
                 size_info = f"size {target_width * 8}x{target_height * 8} pixels"
@@ -444,86 +444,86 @@ class CustomConfigPage:
                 else:
                     prompt = f"{self.default_prompts[image_type]}, {size_info}"
                 
-                # 获取目标尺寸，但使用更大的生成尺寸以提高质量
+                # Get target size, but use larger generation size to improve quality
                 target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
                 original_width, original_height = target_size
                 
-                # 使用更大的生成尺寸以提高AI生成质量
-                # 计算合适的生成尺寸（至少512x512或保持宽高比）
+                # Use larger generation size to improve AI generation quality
+                # Calculate appropriate generation size (at least 512x512 or maintain aspect ratio)
                 if image_type == 'background':
-                    # 背景使用较大尺寸
+                    # Background uses larger size
                     gen_width = 512
                     gen_height = int(512 * original_height / original_width)
                 else:
-                    # 飞机图片使用固定的较大尺寸
+                    # Aircraft images use fixed larger size
                     gen_width = 512
                     gen_height = 512
                 
-                # 调整为8的倍数（Stable Diffusion要求）
+                # Adjust to multiples of 8 (Stable Diffusion requirement)
                 width = ((gen_width + 7) // 8) * 8
                 height = ((gen_height + 7) // 8) * 8
                 
-                print(f"📐 目标尺寸: {original_width}x{original_height}")
-                print(f"📐 生成尺寸（提高质量）: {width}x{height}")
+                print(f"Target size: {original_width}x{original_height}")
+                print(f"Generation size (improved quality): {width}x{height}")
                 
-                # 生成图片 - 增加步数提高质量
+                # Generate image - increase steps to improve quality
                 self.generation_progress = 5
                 
-                # 模拟AI生成的不同阶段进度
-                # 阶段1: 模型加载和初始化 (5% -> 20%)
+                # Simulate AI generation progress for different stages
+                # Stage 1: Model loading and initialization (5% -> 20%)
                 for i in range(5, 21, 3):
                     self.generation_progress = i
-                    time.sleep(0.1)  # 短暂延迟让进度条可见
+                    time.sleep(0.1)  # Brief delay to make progress bar visible
                 
-                # 阶段2: 文本编码 (20% -> 40%)
+                # Stage 2: Text encoding (20% -> 40%)
                 for i in range(20, 41, 4):
                     self.generation_progress = i
                     time.sleep(0.1)
                 
-                # 阶段3: 扩散过程 (40% -> 90%)
+                # Stage 3: Diffusion process (40% -> 90%)
                 for i in range(40, 91, 5):
                     self.generation_progress = i
-                    time.sleep(0.2)  # 扩散过程需要更多时间
+                    time.sleep(0.2)  # Diffusion process needs more time
                 
-                # 阶段4: 图像生成 (90% -> 95%)
+                # Stage 4: Image generation (90% -> 95%)
                 for i in range(90, 96, 1):
                     self.generation_progress = i
                     time.sleep(0.1)
                 
-                # 实际生成图片
+                # Actually generate image
                 image = generate_image_local(prompt, width, height, steps=20)
                 
-                # 阶段5: 后处理 (95% -> 100%)
+                # Stage 5: Post-processing (95% -> 100%)
                 self.generation_progress = 95
                 time.sleep(0.1)
                 self.generation_progress = 100
-                time.sleep(0.2)  # 让100%状态保持一下
+                time.sleep(0.2)  # Keep 100% status for a moment
                 
                 if image:
-                    # 总是需要缩放到目标尺寸（因为我们用了更大的生成尺寸）
-                    print(f"🔄 缩放图片: {width}x{height} -> {target_size}")
-                    # 使用高质量缩放算法
+                    # Always need to scale to target size (because we used larger generation size)
+                    print(f"Scaling image: {width}x{height} -> {target_size}")
+                    # Use high-quality scaling algorithm
                     scaled_image = pygame.transform.smoothscale(image, target_size)
                     
-                    # 更新预览区域（缩放到预览尺寸）
+                    # Update preview area (scale to preview size)
                     if image_type in self.preview_areas:
-                        # 获取预览尺寸
+                        # Get preview size
                         preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
                         preview_image = pygame.transform.smoothscale(scaled_image, preview_size)
                         self.preview_areas[image_type]['image'] = preview_image
-                        print(f"✅ 更新AI预览区域: {image_type}，预览尺寸: {preview_size}")
+                        print(f"Updated AI preview area: {image_type}, preview size: {preview_size}")
                     
-                    # 更新配置缓存（保存目标尺寸的图片）
+                    # Update configuration cache (save target size image)
                     self.config_cache[image_type] = scaled_image
-                    print(f"✅ 更新AI配置缓存: {image_type}，目标尺寸: {target_size}")
+                    print(f"Updated AI configuration cache: {image_type}, target size: {target_size}")
                     
-                    self.show_status(f"{image_type} AI生成成功！", self.GREEN)
+                    self.show_status(f"{image_type} AI generation successful!", self.GREEN)
                 else:
-                    self.show_status(f"{image_type} AI生成失败", self.RED)
+                    self.show_status(f"{image_type} AI generation failed", self.RED)
                 
             except Exception as e:
-                print(f"AI生成失败: {e}")
-                self.show_status(f"AI生成失败: {e}", self.RED)
+                print(f"AI generation failed: {e}")
+                self.show_status(f"AI generation failed: {e}", self.RED)
             finally:
                 self.generating = False
                 self.generation_progress = 0
@@ -531,14 +531,14 @@ class CustomConfigPage:
         threading.Thread(target=generation_thread, daemon=True).start()
     
     def show_status(self, message, color):
-        """显示状态信息"""
+        """Display status information"""
         self.status_message = message
         self.status_color = color
         self.show_status_flag = True
         self.status_timer = time.time()
     
     def clear_cache(self):
-        """清除缓存"""
+        """Clear cache"""
         self.config_cache = {
             'player_plane': None,
             'enemy_plane': None,
@@ -549,142 +549,142 @@ class CustomConfigPage:
         self.force_redraw = True
     
     def get_config(self):
-        """获取配置"""
+        """Get configuration"""
         return self.config_cache
     
     def update(self):
-        """更新状态"""
+        """Update status"""
         current_time = time.time()
         
-        # 检查状态信息显示时间
+        # Check status information display time
         if self.show_status_flag and current_time - self.status_timer > 3:
             self.show_status_flag = False
         
-        # 处理待上传文件
+        # Process pending upload file
         if self.pending_upload:
             image_type, file_path = self.pending_upload
             self.pending_upload = None
             self.process_uploaded_file(image_type, file_path)
         
-        # 更新AI生成进度 - 现在由生成线程控制，这里不需要自动递增
-        # 进度条更新逻辑已移到AI生成线程中，确保与实际生成过程同步
+        # Update AI generation progress - now controlled by generation thread, no auto-increment needed here
+        # Progress bar update logic moved to AI generation thread to ensure synchronization with actual generation process
     
     def process_uploaded_file(self, image_type, file_path):
-        """处理上传的文件"""
+        """Process uploaded file"""
         try:
-            print(f"🔄 处理上传文件: {image_type} - {file_path}")
+            print(f"Processing uploaded file: {image_type} - {file_path}")
             
             if not os.path.exists(file_path):
-                self.show_status(f"文件不存在: {file_path}", self.RED)
+                self.show_status(f"File does not exist: {file_path}", self.RED)
                 return
             
-            # 检查文件类型
+            # Check file type
             valid_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
             file_ext = os.path.splitext(file_path.lower())[1]
             if file_ext not in valid_extensions:
-                self.show_status(f"不支持的文件格式: {file_ext}", self.RED)
+                self.show_status(f"Unsupported file format: {file_ext}", self.RED)
                 return
             
-            # 加载图片
+            # Load image
             try:
                 image = pygame.image.load(file_path)
-                print(f"✅ 成功加载图片，原始尺寸: {image.get_size()}")
+                print(f"Successfully loaded image, original size: {image.get_size()}")
             except pygame.error as e:
-                self.show_status(f"无法加载图片: {str(e)}", self.RED)
+                self.show_status(f"Cannot load image: {str(e)}", self.RED)
                 return
             
-            # 获取目标尺寸
+            # Get target size
             target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
             target_width, target_height = target_size
             
-            # 缩放图片到目标尺寸 - 使用高质量缩放
+            # Scale image to target size - use high-quality scaling
             scaled_image = pygame.transform.smoothscale(image, target_size)
-            print(f"✅ 图片已缩放至目标尺寸: {target_size}")
+            print(f"Image scaled to target size: {target_size}")
             
-            # 更新预览区域（缩放到预览尺寸）
+            # Update preview area (scale to preview size)
             if image_type in self.preview_areas:
-                # 获取预览尺寸
+                # Get preview size
                 preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
                 preview_image = pygame.transform.smoothscale(scaled_image, preview_size)
                 self.preview_areas[image_type]['image'] = preview_image
-                print(f"✅ 更新预览区域: {image_type}，预览尺寸: {preview_size}")
+                print(f"Updated preview area: {image_type}, preview size: {preview_size}")
             
-            # 更新配置缓存（保存目标尺寸的图片）
-            self.config_cache[image_type] = scaled_image
-            print(f"✅ 更新配置缓存: {image_type}，目标尺寸: {target_size}")
+            # Update configuration cache (save target size image)
+            self.config_cache[image_type] = preview_image
+            print(f"Updated configuration cache: {image_type}, target size: {target_size}")
             
-            # 显示成功消息
-            self.show_status(f"{image_type} 上传成功！", self.GREEN)
+            # Show success message
+            self.show_status(f"{image_type} upload successful!", self.GREEN)
             self.force_redraw = True
             
         except Exception as e:
-            print(f"❌ 处理上传文件失败: {e}")
+            print(f"Failed to process uploaded file: {e}")
             import traceback
             traceback.print_exc()
-            self.show_status(f"处理文件失败: {str(e)}", self.RED)
+            self.show_status(f"Failed to process file: {str(e)}", self.RED)
     
     def draw(self):
-        """绘制页面"""
-        # 绘制背景
+        """Draw page"""
+        # Draw background
         if self.background:
             self.screen.blit(self.background, (0, 0))
         else:
             self.screen.fill(self.BLACK)
         
-        # 绘制标题
+        # Draw title
         title = self.title_font.render("Custom Configuration", True, self.WHITE)
         title_rect = title.get_rect(center=(self.width // 2, 50))
         self.screen.blit(title, title_rect)
         
-        # 绘制输入框
+        # Draw input boxes
         self.draw_input_boxes()
         
-        # 绘制预览区域
+        # Draw preview areas
         self.draw_preview_areas()
         
-        # 绘制按钮
+        # Draw buttons
         self.draw_buttons()
         
-        # 绘制状态信息
+        # Draw status information
         if self.show_status_flag:
             self.draw_status_info()
         
-        # 绘制AI生成进度
+        # Draw AI generation progress
         if self.generating:
             self.draw_generation_progress()
         
-        # 重置强制重绘标志
+        # Reset force redraw flag
         self.force_redraw = False
     
     def draw_input_boxes(self):
-        """绘制输入框"""
+        """Draw input boxes"""
         for i, input_box in enumerate(self.input_boxes):
-            # 绘制栏目标题 - 与输入框水平居中
+            # Draw column title - horizontally centered with input box
             title_text = self.text_font.render(input_box['title'], True, self.WHITE)
             title_rect = title_text.get_rect(
-                centerx=input_box['rect'].centerx,  # 水平居中
+                centerx=input_box['rect'].centerx,  # Horizontal center
                 y=input_box['rect'].y - 35
             )
             self.screen.blit(title_text, title_rect)
             
-            # 输入框背景 - 透明效果
+            # Input box background - transparent effect
             if input_box['active']:
-                # 活跃状态：半透明白色背景，蓝色边框
-                transparent_white = (255, 255, 255, 128)  # 半透明白色
+                # Active state: semi-transparent white background, blue border
+                transparent_white = (255, 255, 255, 128)  # Semi-transparent white
                 s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
                 s.set_alpha(128)
                 s.fill((255, 255, 255))
                 self.screen.blit(s, input_box['rect'])
                 pygame.draw.rect(self.screen, self.BLUE, input_box['rect'], 3)
             else:
-                # 非活跃状态：半透明浅灰色背景，深灰色边框
+                # Inactive state: semi-transparent light gray background, dark gray border
                 s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
-                s.set_alpha(80)  # 更透明
+                s.set_alpha(80)  # More transparent
                 s.fill((200, 200, 200))
                 self.screen.blit(s, input_box['rect'])
                 pygame.draw.rect(self.screen, self.DARK_GRAY, input_box['rect'], 2)
             
-            # 输入框文字
+            # Input box text
             if input_box['active']:
                 display_text = input_box['text']
                 text_color = self.BLACK
@@ -692,13 +692,13 @@ class CustomConfigPage:
                 display_text = input_box['text'] or input_box['placeholder']
                 text_color = self.DARK_GRAY if not input_box['text'] else self.BLACK
             
-            # 使用换行文字绘制
+            # Use wrapped text drawing
             self.draw_wrapped_text(input_box['rect'], display_text, text_color)
             
-            # 绘制清除按钮 - 改进样式
+            # Draw clear button - improved style
             clear_button = self.buttons.get(f"clear_{input_box['type']}")
             if clear_button:
-                # 渐变效果
+                # Gradient effect
                 pygame.draw.rect(self.screen, (220, 80, 80), clear_button['rect'])
                 pygame.draw.rect(self.screen, self.BLACK, clear_button['rect'], 2)
                 
@@ -707,30 +707,30 @@ class CustomConfigPage:
                 self.screen.blit(clear_text, clear_rect)
     
     def draw_wrapped_text(self, rect, text, color):
-        """绘制换行文字 - 支持手动换行和自动换行，最多4行"""
+        """Draw wrapped text - supports manual and automatic line breaks, maximum 4 lines"""
         if not text:
             return
         
         line_height = self.text_font.get_height()
         available_width = rect.width - 20
         
-        # 首先按换行符分割文字
+        # First split text by line breaks
         manual_lines = text.split('\n')
         lines = []
         
         for manual_line in manual_lines:
             if not manual_line:
-                # 空行
+                # Empty line
                 lines.append("")
                 continue
                 
-            # 检查手动换行的行是否需要进一步分割
+            # Check if manually wrapped lines need further splitting
             line_surface = self.text_font.render(manual_line, True, color)
             if line_surface.get_width() <= available_width:
-                # 行宽度合适，直接添加
+                # Line width is appropriate, add directly
                 lines.append(manual_line)
             else:
-                # 行太宽，需要自动分割
+                # Line too wide, need automatic splitting
                 current_line = ""
                 for char in manual_line:
                     test_line = current_line + char
@@ -739,37 +739,37 @@ class CustomConfigPage:
                     if test_surface.get_width() <= available_width:
                         current_line = test_line
                     else:
-                        # 当前行已满，保存并开始新行
+                        # Current line is full, save and start new line
                         if current_line:
                             lines.append(current_line)
                         current_line = char
                 
-                # 添加最后一部分
+                # Add last part
                 if current_line:
                     lines.append(current_line)
         
-        # 严格限制最大行数为4行
+        # Strictly limit maximum lines to 4
         max_lines = 4
         if len(lines) > max_lines:
             lines = lines[:max_lines]
-            # 如果第4行太长，截断并添加...
+            # If 4th line is too long, truncate and add ...
             last_line = lines[-1]
             while last_line and self.text_font.render(last_line + "...", True, color).get_width() > available_width:
                 last_line = last_line[:-1]
             lines[-1] = last_line + "..."
         
-        # 绘制每一行
+        # Draw each line
         start_y = rect.y + 10
         
         for i, line in enumerate(lines):
-            # 检查是否会超出输入框底部
+            # Check if it will exceed input box bottom
             if start_y + i * line_height > rect.bottom - 10:
                 break
             
-            # 渲染文字
+            # Render text
             text_surface = self.text_font.render(line, True, color)
             
-            # 绘制文字
+            # Draw text
             text_rect = text_surface.get_rect(
                 x=rect.x + 10,
                 y=start_y + i * line_height
@@ -777,34 +777,34 @@ class CustomConfigPage:
             self.screen.blit(text_surface, text_rect)
     
     def draw_preview_areas(self):
-        """绘制预览区域"""
+        """Draw preview areas"""
         for image_type, preview in self.preview_areas.items():
             rect = preview['rect']
             size = preview['size']
             preview_size = preview.get('preview_size', (size[0] * 3, size[1] * 3))
             
-            # 预览框背景 - 透明效果
+            # Preview box background - transparent effect
             s = pygame.Surface((rect.width, rect.height))
-            s.set_alpha(100)  # 半透明
+            s.set_alpha(100)  # Semi-transparent
             s.fill((150, 150, 150))
             self.screen.blit(s, rect)
             pygame.draw.rect(self.screen, self.BLACK, rect, 2)
             
-            # 预览图片
+            # Preview image
             if preview['image']:
-                # 使用保存的预览尺寸
+                # Use saved preview size
                 scaled_image = pygame.transform.smoothscale(preview['image'], preview_size)
                 
-                # 居中显示
+                # Center display
                 image_rect = scaled_image.get_rect(center=rect.center)
                 self.screen.blit(scaled_image, image_rect)
             else:
-                # 显示"No Image" - 无背景色
+                # Display "No Image" - no background color
                 no_image_text = self.text_font.render("No Image", True, self.DARK_GRAY)
                 no_image_rect = no_image_text.get_rect(center=rect.center)
                 self.screen.blit(no_image_text, no_image_rect)
             
-            # 显示尺寸信息
+            # Display size information
             size_text = f"Target: {size[0]}x{size[1]}"
             size_surface = self.small_font.render(size_text, True, self.WHITE)
             size_rect = size_surface.get_rect(
@@ -813,7 +813,7 @@ class CustomConfigPage:
             )
             self.screen.blit(size_surface, size_rect)
             
-            # 显示预览尺寸
+            # Display preview size
             preview_text = f"Preview: {preview_size[0]}x{preview_size[1]}"
             preview_surface = self.small_font.render(preview_text, True, self.WHITE)
             preview_rect = preview_surface.get_rect(
@@ -823,23 +823,23 @@ class CustomConfigPage:
             self.screen.blit(preview_surface, preview_rect)
     
     def draw_buttons(self):
-        """绘制按钮"""
+        """Draw buttons"""
         for button_name, button in self.buttons.items():
-            # 根据按钮类型设置不同颜色
+            # Set different colors based on button type
             if button['type'] == 'back':
-                # Back按钮 - 灰色
+                # Back button - gray
                 bg_color = (120, 120, 120)
                 border_color = self.BLACK
             elif button['type'] == 'complete':
-                # Complete按钮 - 绿色
+                # Complete button - green
                 bg_color = (80, 180, 80)
                 border_color = self.BLACK
             elif 'upload' in button['type']:
-                # Upload按钮 - 蓝色
+                # Upload button - blue
                 bg_color = (80, 120, 200)
                 border_color = self.BLACK
             elif 'ai_gen' in button['type']:
-                # AI Gen按钮 - 紫色
+                # AI Gen button - purple
                 bg_color = (150, 80, 200)
                 border_color = self.BLACK
             elif 'clear' in button['type']:
@@ -924,7 +924,7 @@ class CustomConfigPage:
             
             # 进度文字 - 居中显示，包含阶段信息
             stage_text = self.get_generation_stage_text()
-            progress_text = f"AI生成中... {self.generation_progress}% - {stage_text}"
+            progress_text = f"AI generating... {self.generation_progress}% - {stage_text}"
             progress_surface = self.text_font.render(progress_text, True, self.WHITE)
             progress_text_rect = progress_surface.get_rect(center=(self.width // 2, progress_y + progress_height + 30))
             self.screen.blit(progress_surface, progress_text_rect)
@@ -932,17 +932,17 @@ class CustomConfigPage:
     def get_generation_stage_text(self):
         """获取AI生成的阶段文字"""
         if self.generation_progress <= 5:
-            return "准备中..."
+            return "Preparing..."
         elif self.generation_progress <= 20:
-            return "模型加载中..."
+            return "Loading model..."
         elif self.generation_progress <= 40:
-            return "文本编码中..."
+            return "Textencoding..."
         elif self.generation_progress <= 90:
-            return "扩散过程中..."
+            return "Diffusion in progress..."
         elif self.generation_progress <= 95:
-            return "图像生成中..."
+            return "Image generation..."
         else:
-            return "后处理中..."
+            return "Post-processing..."
     
     def run(self):
         """运行配置页面 - 用于与启动器集成"""

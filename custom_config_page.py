@@ -10,6 +10,7 @@ import threading
 import time
 from pyqt5_file_selector import select_file
 from local_image_generator import generate_image_local
+from ai_image_processor import AIImageProcessor
 
 class CustomConfigPage:
     def __init__(self, screen, width=None, height=None):
@@ -90,6 +91,9 @@ class CustomConfigPage:
         
         # Reset force redraw flag
         self.force_redraw = False
+        
+        # Initialize AI image processor
+        self.ai_processor = AIImageProcessor()
         
         # Create UI elements
         self.create_ui_elements()
@@ -249,9 +253,14 @@ class CustomConfigPage:
                 'type': f'ai_gen_{image_type}'
             }
             self.buttons[f'ai_gen_{image_type}'] = ai_gen_button
+            
+            # 移除背景去除按钮，现在自动处理
+            # 如果需要手动控制，可以保留这些按钮
         
         # Top buttons - vertically centered with title
         button_y = 25  # Title at Y=50, button height 50, so start from Y=25
+        
+
         
         # Back button - improved style, placed in top-left corner, smaller size
         back_button = {
@@ -378,6 +387,14 @@ class CustomConfigPage:
             image_type = button_type.replace('clear_', '')
             print(f"Clicked Clear button: {image_type}")
             self.clear_input_text(image_type)
+        
+        # 背景去除现在自动处理，不需要手动按钮
+        # elif button_type.startswith('remove_bg_'):
+        #     image_type = button_type.replace('remove_bg_', '')
+        #     print(f"Clicked Remove BG button: {image_type}")
+        #     self.start_background_removal(image_type)
+        
+
     
     def clear_input_text(self, image_type):
         """Clear input box text"""
@@ -416,6 +433,104 @@ class CustomConfigPage:
         
         # Start upload thread
         threading.Thread(target=upload_thread, daemon=True).start()
+    
+    def start_background_removal(self, image_type):
+        """Start background removal process"""
+        if image_type not in ['player_plane', 'enemy_plane']:
+            self.show_status("Background removal only works on airplane images", self.RED)
+            return
+        
+        if image_type not in self.config_cache or not self.config_cache[image_type]:
+            self.show_status(f"Please upload or generate first {image_type} picture", self.RED)
+            return
+        
+        print(f"Starting background removal for {image_type}...")
+        
+        def background_removal_thread():
+            try:
+                # Show processing status
+                self.show_status(f"Processing {image_type} background removal...", self.BLUE)
+                
+                # Get current image
+                current_image = self.config_cache[image_type]
+                
+                def on_complete(result):
+                    if result['status'] == 'success':
+                        # Update configuration cache with processed image
+                        self.config_cache[image_type] = result['pygame_surface']
+                        
+                        # Update preview area
+                        if image_type in self.preview_areas:
+                            preview_size = self.preview_areas[image_type].get('preview_size', (512, 512))
+                            preview_image = pygame.transform.smoothscale(result['pygame_surface'], preview_size)
+                            self.preview_areas[image_type]['image'] = preview_image
+                        
+                        self.show_status(f"{image_type} Background removal completed!", self.GREEN)
+                        self.force_redraw = True
+                        print(f"Background removal completed for {image_type}")
+                    else:
+                        self.show_status(f"{image_type} Background removal failed: {result['error']}", self.RED)
+                        print(f"Background removal failed for {image_type}: {result['error']}")
+                
+                # Start background removal
+                self.ai_processor.process_pygame_surface(
+                    current_image, 
+                    image_type, 
+                    callback=on_complete
+                )
+                
+            except Exception as e:
+                print(f"Background removal failed: {e}")
+                self.show_status(f"Background removal failed: {str(e)}", self.RED)
+        
+        # Start background removal thread
+        threading.Thread(target=background_removal_thread, daemon=True).start()
+    
+
+    
+    def auto_remove_background(self, image_type, image_surface):
+        """自动去除背景"""
+        if image_type not in ['player_plane', 'enemy_plane']:
+            return
+        
+        print(f"automatic removal {image_type} background...")
+        
+        def auto_background_removal_thread():
+            try:
+                # 获取当前图片
+                current_image = image_surface
+                
+                def on_complete(result):
+                    if result['status'] == 'success':
+                        # 更新配置缓存
+                        self.config_cache[image_type] = result['pygame_surface']
+                        
+                        # 更新预览区域
+                        if image_type in self.preview_areas:
+                            preview_size = self.preview_areas[image_type].get('preview_size', (512, 512))
+                            preview_image = pygame.transform.smoothscale(result['pygame_surface'], preview_size)
+                            self.preview_areas[image_type]['image'] = preview_image
+                        
+                        self.show_status(f"{image_type} Automatic background removal completed!", self.GREEN)
+                        self.force_redraw = True
+                        print(f"Automatic background removal completed: {image_type}")
+                    else:
+                        self.show_status(f"{image_type} Automatic background removal failed: {result['error']}", self.RED)
+                        print(f"Automatic background removal failed: {image_type}: {result['error']}")
+                
+                # 开始背景去除
+                self.ai_processor.process_pygame_surface(
+                    current_image, 
+                    image_type, 
+                    callback=on_complete
+                )
+                
+            except Exception as e:
+                print(f"Automatic background removal failed: {e}")
+                self.show_status(f"Automatic background removal failed: {str(e)}", self.RED)
+        
+        # 启动自动背景去除线程
+        threading.Thread(target=auto_background_removal_thread, daemon=True).start()
     
     def start_ai_generation(self, image_type):
         """Start AI generation"""
@@ -518,6 +633,11 @@ class CustomConfigPage:
                     print(f"Updated AI configuration cache: {image_type}, target size: {target_size}")
                     
                     self.show_status(f"{image_type} AI generation successful!", self.GREEN)
+                    
+                    # 自动去除背景（仅对飞机图片）
+                    if image_type in ['player_plane', 'enemy_plane']:
+                        self.show_status(f"Removing automatically {image_type} background...", self.BLUE)
+                        self.auto_remove_background(image_type, scaled_image)
                 else:
                     self.show_status(f"{image_type} AI generation failed", self.RED)
                 
@@ -617,6 +737,11 @@ class CustomConfigPage:
             self.show_status(f"{image_type} upload successful!", self.GREEN)
             self.force_redraw = True
             
+            # 自动去除背景（仅对飞机图片）
+            if image_type in ['player_plane', 'enemy_plane']:
+                self.show_status(f"Removing automatically {image_type} background...", self.BLUE)
+                self.auto_remove_background(image_type, scaled_image)
+            
         except Exception as e:
             print(f"Failed to process uploaded file: {e}")
             import traceback
@@ -652,6 +777,9 @@ class CustomConfigPage:
         # Draw AI generation progress
         if self.generating:
             self.draw_generation_progress()
+        
+        # Draw AI processor status
+        self.draw_ai_processor_status()
         
         # Reset force redraw flag
         self.force_redraw = False
@@ -834,6 +962,7 @@ class CustomConfigPage:
                 # Complete button - green
                 bg_color = (80, 180, 80)
                 border_color = self.BLACK
+
             elif 'upload' in button['type']:
                 # Upload button - blue
                 bg_color = (80, 120, 200)
@@ -842,11 +971,16 @@ class CustomConfigPage:
                 # AI Gen button - purple
                 bg_color = (150, 80, 200)
                 border_color = self.BLACK
+            # 背景去除按钮现在自动处理，不需要特殊颜色
+            # elif 'remove_bg' in button['type']:
+            #     # Remove BG button - orange
+            #     bg_color = (255, 140, 0)
+            #     border_color = self.BLACK
             elif 'clear' in button['type']:
-                # Clear按钮已在input_boxes中处理
+                # Clear button already handled in input_boxes
                 continue
             else:
-                # 默认按钮
+                # Default button
                 bg_color = self.BLUE
                 border_color = self.BLACK
             
@@ -928,6 +1062,54 @@ class CustomConfigPage:
             progress_surface = self.text_font.render(progress_text, True, self.WHITE)
             progress_text_rect = progress_surface.get_rect(center=(self.width // 2, progress_y + progress_height + 30))
             self.screen.blit(progress_surface, progress_text_rect)
+    
+    def draw_ai_processor_status(self):
+        """Draw AI processor status information"""
+        if not hasattr(self, 'ai_processor'):
+            return
+        
+        # Get AI processor status
+        status = self.ai_processor.get_processing_status()
+        
+        # Only show status if processing or if there are items in queue
+        if status['is_processing'] or status['queue_length'] > 0:
+            # Create status display area at bottom of screen
+            status_y = self.height - 80
+            status_height = 60
+            
+            # Status background
+            status_rect = pygame.Rect(50, status_y, self.width - 100, status_height)
+            pygame.draw.rect(self.screen, (50, 50, 50), status_rect)
+            pygame.draw.rect(self.screen, self.WHITE, status_rect, 2)
+            
+            # Status text
+            if status['is_processing']:
+                status_text = f"AI processing: {status['message']} ({status['progress']}%)"
+                text_color = self.BLUE
+            else:
+                status_text = f"in queue: {status['queue_length']} tasks waiting to be processed"
+                text_color = self.GRAY
+            
+            status_surface = self.text_font.render(status_text, True, text_color)
+            status_rect_text = status_surface.get_rect(center=status_rect.center)
+            self.screen.blit(status_surface, status_rect_text)
+            
+            # Progress bar for current task
+            if status['is_processing'] and status['progress'] > 0:
+                progress_width = status_rect.width - 20
+                progress_height = 8
+                progress_x = status_rect.x + 10
+                progress_y = status_rect.bottom - 15
+                
+                # Progress background
+                progress_bg_rect = pygame.Rect(progress_x, progress_y, progress_width, progress_height)
+                pygame.draw.rect(self.screen, self.GRAY, progress_bg_rect)
+                
+                # Progress fill
+                fill_width = int(progress_width * status['progress'] / 100)
+                if fill_width > 0:
+                    progress_fill_rect = pygame.Rect(progress_x, progress_y, fill_width, progress_height)
+                    pygame.draw.rect(self.screen, self.GREEN, progress_fill_rect)
     
     def get_generation_stage_text(self):
         """获取AI生成的阶段文字"""

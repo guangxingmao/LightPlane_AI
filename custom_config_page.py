@@ -122,8 +122,9 @@ class CustomConfigPage:
         """创建输入框"""
         self.input_boxes = []
         
-        # 输入框高度
-        input_height = 120
+        # 输入框高度 - 确保能容纳4行文字
+        line_height = 32  # 文字行高
+        input_height = line_height * 4 + 20  # 4行文字 + 上下边距
         
         # 三栏布局，改进间距
         column_width = (self.width - 120) // 3  # 留出更多边距
@@ -134,7 +135,7 @@ class CustomConfigPage:
         
         for i, (image_type, prompt) in enumerate(self.default_prompts.items()):
             x = start_x + i * column_width
-            y = 180  # 调整Y位置，为标题留出空间
+            y = 200  # 调整Y位置，为标题和按钮留出空间
             
             # 输入框宽度调整
             input_width = column_width - 80
@@ -168,7 +169,7 @@ class CustomConfigPage:
         
         for i, (image_type, size) in enumerate(self.TRADITIONAL_SIZES.items()):
             x = start_x + i * column_width
-            y = 420  # 调整位置
+            y = 460  # 调整位置，在按钮下方
             
             # 预览区域，调整大小
             preview_width = min(column_width - 80, 180)
@@ -188,7 +189,7 @@ class CustomConfigPage:
         
         for i, image_type in enumerate(self.default_prompts.keys()):
             x = start_x + i * column_width
-            y = 320  # 调整位置，在输入框下方
+            y = 360  # 调整位置，在输入框下方
             
             # Upload按钮 - 更好看的样式
             upload_button = {
@@ -206,10 +207,10 @@ class CustomConfigPage:
             }
             self.buttons[f'ai_gen_{image_type}'] = ai_gen_button
         
-        # 底部按钮 - 位置调整
-        button_y = 620
+        # 顶部按钮 - 位置调整到页面上方
+        button_y = 80
         
-        # Back按钮 - 改进样式
+        # Back按钮 - 改进样式，放在左上角
         back_button = {
             'rect': pygame.Rect(60, button_y, 140, 50),
             'text': 'Back to Menu',
@@ -217,7 +218,7 @@ class CustomConfigPage:
         }
         self.buttons['back'] = back_button
         
-        # Complete按钮 - 改进样式
+        # Complete按钮 - 改进样式，放在右上角
         complete_button = {
             'rect': pygame.Rect(self.width - 200, button_y, 140, 50),
             'text': 'Complete',
@@ -238,7 +239,40 @@ class CustomConfigPage:
                 elif event.key == pygame.K_BACKSPACE:
                     self.input_boxes[self.selected_input]['text'] = self.input_boxes[self.selected_input]['text'][:-1]
                 else:
-                    self.input_boxes[self.selected_input]['text'] += event.unicode
+                    # 智能输入处理，支持换行
+                    current_text = self.input_boxes[self.selected_input]['text']
+                    new_char = event.unicode
+                    
+                    # 如果按了回车键，添加换行符
+                    if event.unicode == '\r':
+                        new_char = '\n'
+                    
+                    # 计算添加新字符后的文字
+                    test_text = current_text + new_char
+                    
+                    # 检查是否需要换行
+                    if new_char == '\n':
+                        # 换行符直接添加
+                        self.input_boxes[self.selected_input]['text'] = test_text
+                    else:
+                        # 检查当前行是否会超出宽度
+                        lines = test_text.split('\n')
+                        current_line = lines[-1]  # 当前行
+                        
+                        # 计算当前行的宽度
+                        line_surface = self.text_font.render(current_line, True, self.BLACK)
+                        line_width = line_surface.get_width()
+                        
+                        # 如果当前行超出宽度，自动换行
+                        if line_width > self.input_boxes[self.selected_input]['rect'].width - 20:
+                            # 自动换行
+                            test_text = current_text + '\n' + new_char
+                        
+                        # 检查总行数是否超过4行
+                        total_lines = len(test_text.split('\n'))
+                        if total_lines <= 4:
+                            self.input_boxes[self.selected_input]['text'] = test_text
+                    
                 self.force_redraw = True
     
     def handle_click(self, pos):
@@ -567,47 +601,69 @@ class CustomConfigPage:
                 self.screen.blit(clear_text, clear_rect)
     
     def draw_wrapped_text(self, rect, text, color):
-        """绘制换行文字"""
+        """绘制换行文字 - 支持手动换行和自动换行，最多4行"""
         if not text:
             return
         
-        # 计算每行字符数
-        test_surface = self.text_font.render("A", True, color)
-        char_width = test_surface.get_width()
-        available_width = rect.width - 20  # 留出边距
-        chars_per_line = max(1, int(available_width / char_width))
+        line_height = self.text_font.get_height()
+        available_width = rect.width - 20
         
-        # 分行
+        # 首先按换行符分割文字
+        manual_lines = text.split('\n')
         lines = []
-        current_line = ""
-        words = text.split()
         
-        for word in words:
-            if len(current_line + word) <= chars_per_line:
-                current_line += word + " "
+        for manual_line in manual_lines:
+            if not manual_line:
+                # 空行
+                lines.append("")
+                continue
+                
+            # 检查手动换行的行是否需要进一步分割
+            line_surface = self.text_font.render(manual_line, True, color)
+            if line_surface.get_width() <= available_width:
+                # 行宽度合适，直接添加
+                lines.append(manual_line)
             else:
+                # 行太宽，需要自动分割
+                current_line = ""
+                for char in manual_line:
+                    test_line = current_line + char
+                    test_surface = self.text_font.render(test_line, True, color)
+                    
+                    if test_surface.get_width() <= available_width:
+                        current_line = test_line
+                    else:
+                        # 当前行已满，保存并开始新行
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = char
+                
+                # 添加最后一部分
                 if current_line:
-                    lines.append(current_line.strip())
-                current_line = word + " "
+                    lines.append(current_line)
         
-        if current_line:
-            lines.append(current_line.strip())
-        
-        # 限制最大行数
+        # 严格限制最大行数为4行
         max_lines = 4
         if len(lines) > max_lines:
             lines = lines[:max_lines]
-            lines[-1] = lines[-1][:chars_per_line-3] + "..."
+            # 如果第4行太长，截断并添加...
+            last_line = lines[-1]
+            while last_line and self.text_font.render(last_line + "...", True, color).get_width() > available_width:
+                last_line = last_line[:-1]
+            lines[-1] = last_line + "..."
         
         # 绘制每一行
-        line_height = self.text_font.get_height()
         start_y = rect.y + 10
         
         for i, line in enumerate(lines):
+            # 检查是否会超出输入框底部
             if start_y + i * line_height > rect.bottom - 10:
                 break
             
+            # 渲染文字
             text_surface = self.text_font.render(line, True, color)
+            
+            # 绘制文字
             text_rect = text_surface.get_rect(
                 x=rect.x + 10,
                 y=start_y + i * line_height

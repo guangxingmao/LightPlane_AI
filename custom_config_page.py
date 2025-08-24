@@ -40,18 +40,18 @@ class CustomConfigPage:
         self.GRAY = (200, 200, 200)
         self.DARK_GRAY = (100, 100, 100)
         
-        # 传统模式图片尺寸
+        # 传统模式图片尺寸 - 修正为实际图片尺寸
         self.TRADITIONAL_SIZES = {
-            'player_plane': (45, 56),
-            'enemy_plane': (69, 36),
-            'background': (480, 700)
+            'player_plane': (57, 46),    # life.png 实际尺寸（玩家生命值图标）
+            'enemy_plane': (43, 57),     # enemy1.png 实际尺寸
+            'background': (700, 480)     # background.png 实际尺寸
         }
         
-        # 默认提示词
+        # 默认提示词 - 更新为实际尺寸
         self.default_prompts = {
-            'player_plane': 'fighter jet, military aircraft, size 45x56 pixels',
-            'enemy_plane': 'enemy fighter, dark aircraft, size 69x36 pixels',
-            'background': 'space background, stars, cosmic, size 480x700 pixels'
+            'player_plane': 'fighter jet, military aircraft, size 57x46 pixels',
+            'enemy_plane': 'enemy fighter, dark aircraft, size 43x57 pixels',
+            'background': 'space background, stars, cosmic, size 700x480 pixels'
         }
         
         # 保留或重置配置缓存
@@ -192,8 +192,16 @@ class CustomConfigPage:
             x = start_x + i * column_width
             y = 460  # 调整位置，在按钮下方
             
-            # 预览区域大小与preview尺寸一致（3倍目标尺寸）
-            preview_size = (size[0] * 3, size[1] * 3)
+            # 预览区域大小与preview尺寸一致
+            # 对于background，使用较小的预览尺寸以避免过大
+            if image_type == 'background':
+                # background使用较小的预览尺寸，保持宽高比
+                max_preview_width = 200  # 最大预览宽度
+                scale_factor = max_preview_width / size[0]
+                preview_size = (int(size[0] * scale_factor), int(size[1] * scale_factor))
+            else:
+                # 其他图片使用3倍目标尺寸
+                preview_size = (size[0] * 3, size[1] * 3)
             
             # 计算预览框位置，使其与输入框水平居中
             input_width = column_width - 80  # 输入框宽度
@@ -448,8 +456,8 @@ class CustomConfigPage:
                     
                     # 更新预览区域（缩放到预览尺寸）
                     if image_type in self.preview_areas:
-                        # 获取预览尺寸（3倍目标尺寸）
-                        preview_size = (target_size[0] * 3, target_size[1] * 3)
+                        # 获取预览尺寸
+                        preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
                         preview_image = pygame.transform.scale(scaled_image, preview_size)
                         self.preview_areas[image_type]['image'] = preview_image
                         print(f"✅ 更新AI预览区域: {image_type}，预览尺寸: {preview_size}")
@@ -546,8 +554,8 @@ class CustomConfigPage:
             
             # 更新预览区域（缩放到预览尺寸）
             if image_type in self.preview_areas:
-                # 获取预览尺寸（3倍目标尺寸）
-                preview_size = (target_size[0] * 3, target_size[1] * 3)
+                # 获取预览尺寸
+                preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
                 preview_image = pygame.transform.scale(scaled_image, preview_size)
                 self.preview_areas[image_type]['image'] = preview_image
                 print(f"✅ 更新预览区域: {image_type}，预览尺寸: {preview_size}")

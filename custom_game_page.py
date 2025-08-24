@@ -198,8 +198,7 @@ class CustomGamePage:
             if event.type == pygame.QUIT:
                 return "quit"
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                # 退出游戏时清除缓存
-                self.clear_game_cache()
+                # 按ESC返回config页面，但不清除配置缓存
                 return "back"
                 
             print(event)

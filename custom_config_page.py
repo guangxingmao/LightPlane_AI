@@ -47,11 +47,11 @@ class CustomConfigPage:
             'background': (700, 480)     # background.png 实际尺寸
         }
         
-        # 默认提示词 - 更新为实际尺寸
+        # 默认提示词 - 简单直接，强调高清完整飞机
         self.default_prompts = {
-            'player_plane': 'fighter jet, military aircraft, size 57x46 pixels',
-            'enemy_plane': 'enemy fighter, dark aircraft, size 43x57 pixels',
-            'background': 'space background, stars, cosmic, size 700x480 pixels'
+            'player_plane': 'airplane, high resolution, complete aircraft, full plane',
+            'enemy_plane': 'airplane, high resolution, complete aircraft, full plane',
+            'background': 'space, stars, high resolution'
         }
         
         # 保留或重置配置缓存
@@ -112,7 +112,7 @@ class CustomConfigPage:
                 preview_size = self.preview_areas[image_type].get('preview_size', (512, 512))
                 
                 # 缩放到预览尺寸
-                preview_image = pygame.transform.scale(cached_image, preview_size)
+                preview_image = pygame.transform.smoothscale(cached_image, preview_size)
                 self.preview_areas[image_type]['image'] = preview_image
                 print(f"✅ 恢复 {image_type} 预览图片，预览尺寸: {preview_size}")
     
@@ -434,40 +434,53 @@ class CustomConfigPage:
                         user_input = input_box['text'].strip()
                         break
                 
-                # 构建提示词
-                if user_input:
-                    prompt = f"{user_input}, {self.default_prompts[image_type]}"
-                else:
-                    prompt = self.default_prompts[image_type]
+                # 构建提示词 - 包含target尺寸的8倍信息
+                target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
+                target_width, target_height = target_size
+                size_info = f"size {target_width * 8}x{target_height * 8} pixels"
                 
-                # 获取目标尺寸并调整为8的倍数（Stable Diffusion要求）
+                if user_input:
+                    prompt = f"{user_input}, {self.default_prompts[image_type]}, {size_info}"
+                else:
+                    prompt = f"{self.default_prompts[image_type]}, {size_info}"
+                
+                # 获取目标尺寸，但使用更大的生成尺寸以提高质量
                 target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
                 original_width, original_height = target_size
                 
-                # 调整为8的倍数
-                width = ((original_width + 7) // 8) * 8
-                height = ((original_height + 7) // 8) * 8
+                # 使用更大的生成尺寸以提高AI生成质量
+                # 计算合适的生成尺寸（至少512x512或保持宽高比）
+                if image_type == 'background':
+                    # 背景使用较大尺寸
+                    gen_width = 512
+                    gen_height = int(512 * original_height / original_width)
+                else:
+                    # 飞机图片使用固定的较大尺寸
+                    gen_width = 512
+                    gen_height = 512
                 
-                print(f"📐 原始尺寸: {original_width}x{original_height}")
-                print(f"📐 调整后尺寸（8的倍数）: {width}x{height}")
+                # 调整为8的倍数（Stable Diffusion要求）
+                width = ((gen_width + 7) // 8) * 8
+                height = ((gen_height + 7) // 8) * 8
                 
-                # 生成图片
+                print(f"📐 目标尺寸: {original_width}x{original_height}")
+                print(f"📐 生成尺寸（提高质量）: {width}x{height}")
+                
+                # 生成图片 - 增加步数提高质量
                 self.generation_progress = 5
-                image = generate_image_local(prompt, width, height, steps=8)
+                image = generate_image_local(prompt, width, height, steps=20)
                 
                 if image:
-                    # 如果生成尺寸与目标尺寸不同，需要缩放回目标尺寸
-                    if (width, height) != target_size:
-                        print(f"🔄 缩放图片: {width}x{height} -> {target_size}")
-                        scaled_image = pygame.transform.scale(image, target_size)
-                    else:
-                        scaled_image = image
+                    # 总是需要缩放到目标尺寸（因为我们用了更大的生成尺寸）
+                    print(f"🔄 缩放图片: {width}x{height} -> {target_size}")
+                    # 使用高质量缩放算法
+                    scaled_image = pygame.transform.smoothscale(image, target_size)
                     
                     # 更新预览区域（缩放到预览尺寸）
                     if image_type in self.preview_areas:
                         # 获取预览尺寸
                         preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
-                        preview_image = pygame.transform.scale(scaled_image, preview_size)
+                        preview_image = pygame.transform.smoothscale(scaled_image, preview_size)
                         self.preview_areas[image_type]['image'] = preview_image
                         print(f"✅ 更新AI预览区域: {image_type}，预览尺寸: {preview_size}")
                     
@@ -557,15 +570,15 @@ class CustomConfigPage:
             target_size = self.TRADITIONAL_SIZES.get(image_type, (512, 512))
             target_width, target_height = target_size
             
-            # 缩放图片到目标尺寸
-            scaled_image = pygame.transform.scale(image, target_size)
+            # 缩放图片到目标尺寸 - 使用高质量缩放
+            scaled_image = pygame.transform.smoothscale(image, target_size)
             print(f"✅ 图片已缩放至目标尺寸: {target_size}")
             
             # 更新预览区域（缩放到预览尺寸）
             if image_type in self.preview_areas:
                 # 获取预览尺寸
                 preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
-                preview_image = pygame.transform.scale(scaled_image, preview_size)
+                preview_image = pygame.transform.smoothscale(scaled_image, preview_size)
                 self.preview_areas[image_type]['image'] = preview_image
                 print(f"✅ 更新预览区域: {image_type}，预览尺寸: {preview_size}")
             
@@ -753,7 +766,7 @@ class CustomConfigPage:
             # 预览图片
             if preview['image']:
                 # 使用保存的预览尺寸
-                scaled_image = pygame.transform.scale(preview['image'], preview_size)
+                scaled_image = pygame.transform.smoothscale(preview['image'], preview_size)
                 
                 # 居中显示
                 image_rect = scaled_image.get_rect(center=rect.center)

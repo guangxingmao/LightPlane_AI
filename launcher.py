@@ -626,9 +626,17 @@ class GameManager:
             # 如果已有配置页面实例，保留其缓存
             if hasattr(self, 'custom_config_page') and self.custom_config_page:
                 old_cache = getattr(self.custom_config_page, 'config_cache', {})
-                self.custom_config_page = CustomConfigPage(self.screen, SCREEN_WIDTH, SCREEN_HEIGHT)
-                self.custom_config_page.initialize_config(preserve_cache=True)
+                print(f"💾 保存旧缓存: {list(old_cache.keys())}")
+                
+                # 创建新实例但不自动初始化
+                self.custom_config_page = CustomConfigPage.__new__(CustomConfigPage)
+                self.custom_config_page.screen = self.screen
+                self.custom_config_page.width = SCREEN_WIDTH
+                self.custom_config_page.height = SCREEN_HEIGHT
+                
+                # 先设置缓存再初始化
                 self.custom_config_page.config_cache = old_cache
+                self.custom_config_page.initialize_config(preserve_cache=True)
                 print("💾 配置缓存已保留")
             else:
                 self.custom_config_page = CustomConfigPage(self.screen, SCREEN_WIDTH, SCREEN_HEIGHT)

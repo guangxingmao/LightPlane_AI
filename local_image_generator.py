@@ -65,7 +65,8 @@ def generate_image_local(prompt, width=512, height=512, steps=8, use_fast_mode=T
                     torch_dtype=torch.float16,
                     use_safetensors=True,
                     low_cpu_mem_usage=True,
-                    cache_dir="./models"  # 指定缓存目录
+                    cache_dir="./models",  # 指定缓存目录
+                    safety_checker=None  # 禁用安全过滤器
                 )
                 
                 # 强制移动到GPU
@@ -82,14 +83,14 @@ def generate_image_local(prompt, width=512, height=512, steps=8, use_fast_mode=T
             # 记录开始时间
             start_time = time.time()
             
-            # 使用快速生成设置（7-8步）
+            # 使用高质量生成设置
             image = _global_pipe(
                 prompt=prompt,
                 width=width,
                 height=height,
                 num_inference_steps=steps,
-                guidance_scale=7.5,
-                eta=0.0  # 减少随机性，提高速度
+                guidance_scale=12.0,  # 增加引导强度，提高与提示词的匹配度
+                eta=0.0  # 减少随机性
             ).images[0]
             
             # 检查生成时间

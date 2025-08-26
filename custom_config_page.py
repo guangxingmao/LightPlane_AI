@@ -62,6 +62,12 @@ class CustomConfigPage:
                 'enemy_plane': None,
                 'background': None
             }
+            # 添加图片来源标识
+            self.image_sources = {
+                'player_plane': None,  # 'ai_generated', 'uploaded', 'default'
+                'enemy_plane': None,
+                'background': None
+            }
             print("Configuration cache reset")
         else:
             print("Preserving existing configuration cache")
@@ -630,7 +636,10 @@ class CustomConfigPage:
                     
                     # Update configuration cache (save target size image)
                     self.config_cache[image_type] = scaled_image
+                    # 设置图片来源标识为AI生成
+                    self.image_sources[image_type] = 'ai_generated'
                     print(f"Updated AI configuration cache: {image_type}, target size: {target_size}")
+                    print(f"Image source marked as: {self.image_sources[image_type]}")
                     
                     self.show_status(f"{image_type} AI generation successful!", self.GREEN)
                     
@@ -664,13 +673,22 @@ class CustomConfigPage:
             'enemy_plane': None,
             'background': None
         }
+        # 清除图片来源标识
+        self.image_sources = {
+            'player_plane': None,
+            'enemy_plane': None,
+            'background': None
+        }
         for preview in self.preview_areas.values():
             preview['image'] = None
         self.force_redraw = True
     
     def get_config(self):
         """Get configuration"""
-        return self.config_cache
+        return {
+            'images': self.config_cache,
+            'sources': self.image_sources
+        }
     
     def update(self):
         """Update status"""
@@ -731,7 +749,10 @@ class CustomConfigPage:
             
             # Update configuration cache (save target size image)
             self.config_cache[image_type] = preview_image
+            # 设置图片来源标识为上传
+            self.image_sources[image_type] = 'uploaded'
             print(f"Updated configuration cache: {image_type}, target size: {target_size}")
+            print(f"Image source marked as: {self.image_sources[image_type]}")
             
             # Show success message
             self.show_status(f"{image_type} upload successful!", self.GREEN)

@@ -222,8 +222,8 @@ class CustomGamePage:
             # 处理敌机创建事件
             if event.type == CREAT_ENEMY_EVENT and self.button.pause_game % 2 == 0:
                 # 使用自定义敌机类或默认敌机类
-                if self.custom_config.get('enemy_plane'):
-                    new_enemy = CustomEnemy(self.custom_config['enemy_plane'])
+                if self.custom_config.get('images', {}).get('enemy_plane'):
+                    new_enemy = CustomEnemy(self.custom_config['images']['enemy_plane'])
                     print("✅ 创建新的自定义敌机")
                 else:
                     new_enemy = Enemy()
@@ -358,11 +358,19 @@ class CustomGamePage:
     def __creat_sprites(self):
         '''创建精灵组'''
         # 背景组 - 根据配置选择使用自定义背景或默认背景
-        if self.custom_config.get('background'):
+        if self.custom_config.get('images', {}).get('background'):
             # 使用自定义背景
-            bg1 = CustomBackground(self.custom_config['background'], self.screen_width, self.screen_height)
-            bg2 = CustomBackground(self.custom_config['background'], self.screen_width, self.screen_height, True)
-            print("✅ 使用自定义背景图片")
+            background_image = self.custom_config['images']['background']
+            background_source = self.custom_config.get('sources', {}).get('background', 'uploaded')
+            is_ai_generated = (background_source == 'ai_generated')
+            
+            bg1 = CustomBackground(background_image, self.screen_width, self.screen_height, False, is_ai_generated)
+            bg2 = CustomBackground(background_image, self.screen_width, self.screen_height, True, is_ai_generated)
+            print(f"✅ 使用自定义背景图片，来源: {background_source}")
+            if is_ai_generated:
+                print("🎨 AI生成的背景将保持静态（不移动）")
+            else:
+                print("📁 上传的背景将保持移动效果")
         else:
             # 使用默认背景
             bg1 = Background()
@@ -370,7 +378,7 @@ class CustomGamePage:
             # 调整背景图片大小以适应屏幕
             bg1.image = pygame.transform.scale(bg1.image, (self.screen_width, self.screen_height))
             bg2.image = pygame.transform.scale(bg2.image, (self.screen_width, self.screen_height))
-            print("✅ 使用默认背景图片")
+            print("✅ 使用默认背景图片，保持移动效果")
         
         # 重新设置背景位置
         bg1.rect = bg1.image.get_rect()
@@ -384,9 +392,9 @@ class CustomGamePage:
         
         # 创建多个敌机实例
         for i in range(5):  # 创建5个敌机
-            if self.custom_config.get('enemy_plane'):
+            if self.custom_config.get('images', {}).get('enemy_plane'):
                 # 使用自定义敌机
-                enemy = CustomEnemy(self.custom_config['enemy_plane'])
+                enemy = CustomEnemy(self.custom_config['images']['enemy_plane'])
                 print(f"✅ 创建自定义敌机 {i+1}")
             else:
                 # 使用默认敌机
@@ -408,10 +416,10 @@ class CustomGamePage:
         self.global_enemy_bullets = pygame.sprite.Group()
 
         # 英雄组 - 根据配置选择使用自定义玩家飞机或默认玩家飞机
-        if self.custom_config.get('player_plane'):
+        if self.custom_config.get('images', {}).get('player_plane'):
             # 使用自定义玩家飞机
-            self.hero1 = CustomHero(self.custom_config['player_plane'])
-            print(f"✅ 使用自定义玩家飞机图片，尺寸: {self.custom_config['player_plane'].get_size()}")
+            self.hero1 = CustomHero(self.custom_config['images']['player_plane'])
+            print(f"✅ 使用自定义玩家飞机图片，尺寸: {self.custom_config['images']['player_plane'].get_size()}")
         else:
             # 使用默认玩家飞机
             self.hero1 = Hero('./images/life.png')
@@ -425,16 +433,30 @@ class CustomGamePage:
 
 class CustomBackground(Background):
     """自定义背景类"""
-    def __init__(self, custom_image, screen_width, screen_height, is_second=False):
+    def __init__(self, custom_image, screen_width, screen_height, is_second=False, is_ai_generated=False):
         super().__init__(is_second)
         # 替换背景图片
         self.image = custom_image
         # 调整大小以适应屏幕
-        self.image = pygame.transform.scale(self.image, (screen_width, screen_height))
+        self.image = pygame.transform.scale(custom_image, (screen_width, screen_height))
         # 重新设置位置
         self.rect = self.image.get_rect()
         if is_second:
             self.rect.x = screen_width
+        
+        # 标记是否为AI生成的背景
+        self.is_ai_generated = is_ai_generated
+    
+    def update(self):
+        """重写update方法，AI生成的背景不移动"""
+        if self.is_ai_generated:
+            # AI生成的背景不移动，保持静态
+            pass
+        else:
+            # 默认背景保持移动效果
+            self.rect.x -= 2
+            if self.rect.x <= -self.rect.width:
+                self.rect.x = self.rect.width
 
 class CustomHero(Hero):
     """自定义英雄类"""

@@ -21,7 +21,7 @@ class EasterEggPage:
         self.screen_height = screen.get_height()
 
         # 设置窗口的标题
-        pygame.display.set_caption('LightPlane Fighter - Easter Egg Mode 🥚')
+        pygame.display.set_caption('LightPlane Fighter')
         # 创建游戏时钟
         self.clock = pygame.time.Clock()
         # 生命数量

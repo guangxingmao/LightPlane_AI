@@ -39,14 +39,22 @@ class CustomConfigPage:
             self.text_font = pygame.font.Font(None, 32)
             self.small_font = pygame.font.Font(None, 24)
         
-        # Colors
+        # Colors - 现代化配色方案
         self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
-        self.BLUE = (100, 150, 255)
-        self.GREEN = (100, 255, 100)
-        self.RED = (255, 100, 100)
-        self.GRAY = (200, 200, 200)
-        self.DARK_GRAY = (100, 100, 100)
+        self.BLACK = (18, 18, 18)  # 深黑色，更现代
+        self.DARK_BLUE = (25, 35, 60)  # 深蓝色背景
+        self.BLUE = (64, 156, 255)  # 明亮的蓝色
+        self.LIGHT_BLUE = (100, 180, 255)  # 浅蓝色
+        self.GREEN = (76, 217, 100)  # 苹果风格的绿色
+        self.LIGHT_GREEN = (120, 255, 120)  # 浅绿色
+        self.RED = (255, 69, 58)  # 苹果风格的红色
+        self.ORANGE = (255, 149, 0)  # 橙色
+        self.PURPLE = (175, 82, 222)  # 紫色
+        self.GRAY = (142, 142, 147)  # 中性灰色
+        self.LIGHT_GRAY = (229, 229, 234)  # 浅灰色
+        self.DARK_GRAY = (58, 58, 60)  # 深灰色
+        self.TRANSPARENT_WHITE = (255, 255, 255, 180)  # 半透明白色
+        self.TRANSPARENT_BLACK = (0, 0, 0, 120)  # 半透明黑色
         
         # Traditional mode image sizes - corrected to actual image sizes
         self.TRADITIONAL_SIZES = {
@@ -155,7 +163,7 @@ class CustomConfigPage:
                 print(f"Restored {image_type} preview image, preview size: {preview_size}")
     
     def load_background(self):
-        """Load background image"""
+        """Load background image or create modern gradient background"""
         try:
             bg_path = os.path.join('images', 'background.png')
             if os.path.exists(bg_path):
@@ -165,6 +173,32 @@ class CustomConfigPage:
                 return None
         except:
             return None
+    
+    def draw_modern_background(self):
+        """绘制现代化的渐变背景"""
+        # 创建渐变背景
+        for y in range(self.height):
+            # 从深蓝色到深黑色的渐变
+            ratio = y / self.height
+            r = int(25 + (18 - 25) * ratio)
+            g = int(35 + (18 - 35) * ratio)
+            b = int(60 + (18 - 60) * ratio)
+            pygame.draw.line(self.screen, (r, g, b), (0, y), (self.width, y))
+        
+        # 添加一些装饰性的光点效果
+        import random
+        random.seed(42)  # 固定种子，确保每次显示效果一致
+        for _ in range(50):
+            x = random.randint(0, self.width)
+            y = random.randint(0, self.height)
+            size = random.randint(1, 3)
+            alpha = random.randint(30, 80)
+            
+            # 创建半透明的光点
+            light_surface = pygame.Surface((size * 2, size * 2))
+            light_surface.set_alpha(alpha)
+            light_surface.fill(self.WHITE)
+            self.screen.blit(light_surface, (x - size, y - size))
     
     def create_ui_elements(self):
         """Create UI elements"""
@@ -803,12 +837,23 @@ class CustomConfigPage:
         if self.background:
             self.screen.blit(self.background, (0, 0))
         else:
-            self.screen.fill(self.BLACK)
+            self.draw_modern_background()
         
-        # Draw title
+        # Draw title with shadow effect
         title = self.render_text("自定义配置", 48, self.WHITE)
         title_rect = title.get_rect(center=(self.width // 2, 50))
+        
+        # 添加标题阴影效果
+        shadow = self.render_text("自定义配置", 48, self.TRANSPARENT_BLACK)
+        shadow_rect = shadow.get_rect(center=(self.width // 2 + 3, 53))
+        self.screen.blit(shadow, shadow_rect)
         self.screen.blit(title, title_rect)
+        
+        # 添加标题下的装饰线
+        line_y = 80
+        line_width = 200
+        line_x = (self.width - line_width) // 2
+        pygame.draw.line(self.screen, self.BLUE, (line_x, line_y), (line_x + line_width, line_y), 3)
         
         # Draw input boxes
         self.draw_input_boxes()
@@ -844,20 +889,23 @@ class CustomConfigPage:
             )
             self.screen.blit(title_text, title_rect)
             
-            # Input box background - transparent effect
+            # Input box background - modern glass effect
             if input_box['active']:
-                # Active state: semi-transparent white background, blue border
-                transparent_white = (255, 255, 255, 128)  # Semi-transparent white
+                # Active state: glass effect with blue accent
                 s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
-                s.set_alpha(128)
-                s.fill((255, 255, 255))
+                s.set_alpha(40)
+                s.fill(self.WHITE)
                 self.screen.blit(s, input_box['rect'])
+                
+                # 渐变边框效果
                 pygame.draw.rect(self.screen, self.BLUE, input_box['rect'], 3)
+                # 内边框高光
+                pygame.draw.rect(self.screen, self.LIGHT_BLUE, input_box['rect'].inflate(-6, -6), 1)
             else:
-                # Inactive state: semi-transparent light gray background, dark gray border
+                # Inactive state: subtle glass effect
                 s = pygame.Surface((input_box['rect'].width, input_box['rect'].height))
-                s.set_alpha(80)  # More transparent
-                s.fill((200, 200, 200))
+                s.set_alpha(20)
+                s.fill(self.LIGHT_GRAY)
                 self.screen.blit(s, input_box['rect'])
                 pygame.draw.rect(self.screen, self.DARK_GRAY, input_box['rect'], 2)
             
@@ -872,15 +920,30 @@ class CustomConfigPage:
             # Use wrapped text drawing
             self.draw_wrapped_text(input_box['rect'], display_text, text_color)
             
-            # Draw clear button - improved style
+            # Draw clear button - modern style
             clear_button = self.buttons.get(f"clear_{input_box['type']}")
             if clear_button:
-                # Gradient effect
-                pygame.draw.rect(self.screen, (220, 80, 80), clear_button['rect'])
-                pygame.draw.rect(self.screen, self.BLACK, clear_button['rect'], 2)
+                # 现代风格的清除按钮
+                button_rect = clear_button['rect']
                 
-                clear_text = self.render_text(clear_button['text'], 24, self.WHITE)
-                clear_rect = clear_text.get_rect(center=clear_button['rect'].center)
+                # 渐变背景
+                gradient_surface = pygame.Surface((button_rect.width, button_rect.height))
+                for y in range(button_rect.height):
+                    ratio = y / button_rect.height
+                    r = int(255 * (1 - ratio * 0.3))
+                    g = int(69 * (1 - ratio * 0.3))
+                    b = int(58 * (1 - ratio * 0.3))
+                    pygame.draw.line(gradient_surface, (r, g, b), (0, y), (button_rect.width, y))
+                
+                self.screen.blit(gradient_surface, button_rect)
+                
+                # 边框和高光
+                pygame.draw.rect(self.screen, self.RED, button_rect, 2)
+                pygame.draw.rect(self.screen, (255, 120, 120), button_rect.inflate(-4, -4), 1)
+                
+                # 按钮文字 - 调整字体大小
+                clear_text = self.render_text(clear_button['text'], 18, self.WHITE)
+                clear_rect = clear_text.get_rect(center=button_rect.center)
                 self.screen.blit(clear_text, clear_rect)
     
     def draw_wrapped_text(self, rect, text, color):
@@ -960,12 +1023,16 @@ class CustomConfigPage:
             size = preview['size']
             preview_size = preview.get('preview_size', (size[0] * 3, size[1] * 3))
             
-            # Preview box background - transparent effect
+            # Preview box background - modern glass effect
             s = pygame.Surface((rect.width, rect.height))
-            s.set_alpha(100)  # Semi-transparent
-            s.fill((150, 150, 150))
+            s.set_alpha(30)  # 更透明
+            s.fill(self.WHITE)
             self.screen.blit(s, rect)
-            pygame.draw.rect(self.screen, self.BLACK, rect, 2)
+            
+            # 现代化边框
+            pygame.draw.rect(self.screen, self.LIGHT_GRAY, rect, 2)
+            # 内边框高光
+            pygame.draw.rect(self.screen, self.WHITE, rect.inflate(-4, -4), 1)
             
             # Preview image
             if preview['image']:
@@ -977,13 +1044,13 @@ class CustomConfigPage:
                 self.screen.blit(scaled_image, image_rect)
             else:
                 # Display "No Image" - no background color
-                no_image_text = self.render_text("无图片", 32, self.DARK_GRAY)
+                no_image_text = self.render_text("无图片", 28, self.DARK_GRAY)
                 no_image_rect = no_image_text.get_rect(center=rect.center)
                 self.screen.blit(no_image_text, no_image_rect)
             
             # Display size information
             size_text = f"目标: {size[0]}x{size[1]}"
-            size_surface = self.render_text(size_text, 24, self.WHITE)
+            size_surface = self.render_text(size_text, 20, self.WHITE)
             size_rect = size_surface.get_rect(
                 x=rect.x,
                 y=rect.bottom + 15
@@ -992,7 +1059,7 @@ class CustomConfigPage:
             
             # Display preview size
             preview_text = f"预览: {preview_size[0]}x{preview_size[1]}"
-            preview_surface = self.render_text(preview_text, 24, self.WHITE)
+            preview_surface = self.render_text(preview_text, 20, self.WHITE)
             preview_rect = preview_surface.get_rect(
                 x=rect.x,
                 y=size_rect.bottom + 5
@@ -1000,71 +1067,98 @@ class CustomConfigPage:
             self.screen.blit(preview_surface, preview_rect)
     
     def draw_buttons(self):
-        """Draw buttons"""
+        """Draw buttons with modern styling"""
         for button_name, button in self.buttons.items():
-            # Set different colors based on button type
+            # Set modern colors based on button type
             if button['type'] == 'back':
-                # Back button - gray
-                bg_color = (120, 120, 120)
-                border_color = self.BLACK
+                # Back button - modern gray
+                bg_color = self.GRAY
+                border_color = self.DARK_GRAY
+                hover_color = self.LIGHT_GRAY
             elif button['type'] == 'complete':
-                # Complete button - green
-                bg_color = (80, 180, 80)
-                border_color = self.BLACK
-
+                # Complete button - modern green
+                bg_color = self.GREEN
+                border_color = self.DARK_GRAY
+                hover_color = self.LIGHT_GREEN
             elif 'upload' in button['type']:
-                # Upload button - blue
-                bg_color = (80, 120, 200)
-                border_color = self.BLACK
+                # Upload button - modern blue
+                bg_color = self.BLUE
+                border_color = self.DARK_BLUE
+                hover_color = self.LIGHT_BLUE
             elif 'ai_gen' in button['type']:
-                # AI Gen button - purple
-                bg_color = (150, 80, 200)
-                border_color = self.BLACK
-            # 背景去除按钮现在自动处理，不需要特殊颜色
-            # elif 'remove_bg' in button['type']:
-            #     # Remove BG button - orange
-            #     bg_color = (255, 140, 0)
-            #     border_color = self.BLACK
+                # AI Gen button - modern purple
+                bg_color = self.PURPLE
+                border_color = self.DARK_GRAY
+                hover_color = (200, 120, 255)
             elif 'clear' in button['type']:
                 # Clear button already handled in input_boxes
                 continue
             else:
                 # Default button
                 bg_color = self.BLUE
-                border_color = self.BLACK
+                border_color = self.DARK_BLUE
+                hover_color = self.LIGHT_BLUE
             
-            # 绘制按钮背景和边框
-            pygame.draw.rect(self.screen, bg_color, button['rect'])
-            pygame.draw.rect(self.screen, border_color, button['rect'], 2)
+            # 检查鼠标悬停状态
+            mouse_pos = pygame.mouse.get_pos()
+            is_hovered = button['rect'].collidepoint(mouse_pos)
             
-            # 添加光泽效果
-            highlight_rect = pygame.Rect(
-                button['rect'].x + 2, 
-                button['rect'].y + 2, 
-                button['rect'].width - 4, 
-                button['rect'].height // 3
-            )
-            highlight_color = tuple(min(255, c + 40) for c in bg_color)
-            pygame.draw.rect(self.screen, highlight_color, highlight_rect)
+            # 使用悬停颜色或默认颜色
+            current_bg_color = hover_color if is_hovered else bg_color
             
-            # 按钮文字
-            font_size = 24 if len(button['text']) > 8 else 32
+            # 绘制现代化按钮背景
+            button_rect = button['rect']
+            
+            # 渐变背景
+            gradient_surface = pygame.Surface((button_rect.width, button_rect.height))
+            for y in range(button_rect.height):
+                ratio = y / button_rect.height
+                r = int(current_bg_color[0] * (1 - ratio * 0.2))
+                g = int(current_bg_color[1] * (1 - ratio * 0.2))
+                b = int(current_bg_color[2] * (1 - ratio * 0.2))
+                pygame.draw.line(gradient_surface, (r, g, b), (0, y), (button_rect.width, y))
+            
+            self.screen.blit(gradient_surface, button_rect)
+            
+            # 现代化边框
+            pygame.draw.rect(self.screen, border_color, button_rect, 2)
+            
+            # 内边框高光效果
+            pygame.draw.rect(self.screen, self.WHITE, button_rect.inflate(-4, -4), 1)
+            
+            # 按钮文字 - 更小的字体大小
+            font_size = 18 if len(button['text']) > 6 else 22
             button_text = self.render_text(button['text'], font_size, self.WHITE)
-            button_text_rect = button_text.get_rect(center=button['rect'].center)
+            button_text_rect = button_text.get_rect(center=button_rect.center)
             self.screen.blit(button_text, button_text_rect)
     
     def draw_status_info(self):
-        """绘制状态信息"""
+        """绘制状态信息 - 现代化样式"""
         if self.status_message:
-            # 状态框背景
+            # 状态框背景 - 现代化设计
             status_rect = pygame.Rect(50, 50, self.width - 100, 60)
-            pygame.draw.rect(self.screen, self.status_color, status_rect)
-            pygame.draw.rect(self.screen, self.BLACK, status_rect, 2)
             
-            # 状态文字
-            status_text = self.render_text(self.status_message, 32, self.WHITE)
+            # 半透明背景
+            status_surface = pygame.Surface((status_rect.width, status_rect.height))
+            status_surface.set_alpha(200)
+            status_surface.fill(self.status_color)
+            self.screen.blit(status_surface, status_rect)
+            
+            # 现代化边框
+            pygame.draw.rect(self.screen, self.WHITE, status_rect, 2)
+            pygame.draw.rect(self.screen, self.DARK_GRAY, status_rect.inflate(-4, -4), 1)
+            
+            # 状态文字 - 调整字体大小
+            status_text = self.render_text(self.status_message, 28, self.WHITE)
             status_text_rect = status_text.get_rect(center=status_rect.center)
             self.screen.blit(status_text, status_text_rect)
+            
+            # 添加状态图标（简单的装饰点）
+            icon_size = 8
+            icon_x = status_rect.x + 20
+            icon_y = status_rect.centery
+            pygame.draw.circle(self.screen, self.WHITE, (icon_x, icon_y), icon_size)
+            pygame.draw.circle(self.screen, self.status_color, (icon_x, icon_y), icon_size - 2)
     
     def draw_generation_progress(self):
         """绘制AI生成进度"""
@@ -1081,29 +1175,37 @@ class CustomConfigPage:
             progress_x = (self.width - progress_width) // 2
             progress_y = (self.height - progress_height) // 2
             
-            # 进度条背景
+            # 进度条背景 - 现代化设计
             progress_bg_rect = pygame.Rect(progress_x, progress_y, progress_width, progress_height)
-            pygame.draw.rect(self.screen, self.GRAY, progress_bg_rect)
-            pygame.draw.rect(self.screen, self.BLACK, progress_bg_rect, 2)
+            
+            # 半透明背景
+            bg_surface = pygame.Surface((progress_width, progress_height))
+            bg_surface.set_alpha(100)
+            bg_surface.fill(self.DARK_GRAY)
+            self.screen.blit(bg_surface, progress_bg_rect)
+            
+            # 现代化边框
+            pygame.draw.rect(self.screen, self.LIGHT_GRAY, progress_bg_rect, 2)
             
             # 进度条填充
             if self.generation_progress > 0:
                 fill_width = int(progress_width * self.generation_progress / 100)
                 if fill_width > 0:
                     progress_fill_rect = pygame.Rect(progress_x, progress_y, fill_width, progress_height)
-                    # 使用渐变色效果
-                    gradient_color = (
-                        int(100 + (self.generation_progress * 1.55)),  # 绿色渐变
-                        int(255 - (self.generation_progress * 0.5)),   # 绿色渐变
-                        int(100 + (self.generation_progress * 0.5))    # 绿色渐变
-                    )
-                    pygame.draw.rect(self.screen, gradient_color, progress_fill_rect)
                     
-                    # 添加高光效果
-                    highlight_height = progress_height // 3
-                    highlight_rect = pygame.Rect(progress_x, progress_y, fill_width, highlight_height)
-                    highlight_color = tuple(min(255, c + 40) for c in gradient_color)
-                    pygame.draw.rect(self.screen, highlight_color, highlight_rect)
+                    # 创建渐变填充效果
+                    fill_surface = pygame.Surface((fill_width, progress_height))
+                    for y in range(progress_height):
+                        ratio = y / progress_height
+                        r = int(76 * (1 - ratio * 0.3))  # 绿色渐变
+                        g = int(217 * (1 - ratio * 0.3))
+                        b = int(100 * (1 - ratio * 0.3))
+                        pygame.draw.line(fill_surface, (r, g, b), (0, y), (fill_width, y))
+                    
+                    self.screen.blit(fill_surface, progress_fill_rect)
+                    
+                    # 添加内边框高光
+                    pygame.draw.rect(self.screen, self.LIGHT_GREEN, progress_fill_rect.inflate(-2, -2), 1)
             
             # 进度文字 - 居中显示，包含阶段信息
             stage_text = self.get_generation_stage_text()
@@ -1126,10 +1228,18 @@ class CustomConfigPage:
             status_y = self.height - 80
             status_height = 60
             
-            # Status background
+            # Status background - modern design
             status_rect = pygame.Rect(50, status_y, self.width - 100, status_height)
-            pygame.draw.rect(self.screen, (50, 50, 50), status_rect)
-            pygame.draw.rect(self.screen, self.WHITE, status_rect, 2)
+            
+            # 半透明背景
+            status_surface = pygame.Surface((status_rect.width, status_rect.height))
+            status_surface.set_alpha(180)
+            status_surface.fill(self.DARK_GRAY)
+            self.screen.blit(status_surface, status_rect)
+            
+            # 现代化边框
+            pygame.draw.rect(self.screen, self.LIGHT_GRAY, status_rect, 2)
+            pygame.draw.rect(self.screen, self.WHITE, status_rect.inflate(-4, -4), 1)
             
             # Status text
             if status['is_processing']:
@@ -1150,15 +1260,36 @@ class CustomConfigPage:
                 progress_x = status_rect.x + 10
                 progress_y = status_rect.bottom - 15
                 
-                # Progress background
+                # Progress background - modern design
                 progress_bg_rect = pygame.Rect(progress_x, progress_y, progress_width, progress_height)
-                pygame.draw.rect(self.screen, self.GRAY, progress_bg_rect)
+                
+                # 半透明背景
+                bg_surface = pygame.Surface((progress_width, progress_height))
+                bg_surface.set_alpha(100)
+                bg_surface.fill(self.DARK_GRAY)
+                self.screen.blit(bg_surface, progress_bg_rect)
+                
+                # 现代化边框
+                pygame.draw.rect(self.screen, self.LIGHT_GRAY, progress_bg_rect, 1)
                 
                 # Progress fill
                 fill_width = int(progress_width * status['progress'] / 100)
                 if fill_width > 0:
                     progress_fill_rect = pygame.Rect(progress_x, progress_y, fill_width, progress_height)
-                    pygame.draw.rect(self.screen, self.GREEN, progress_fill_rect)
+                    
+                    # 创建渐变填充效果
+                    fill_surface = pygame.Surface((fill_width, progress_height))
+                    for y in range(progress_height):
+                        ratio = y / progress_height
+                        r = int(76 * (1 - ratio * 0.3))  # 绿色渐变
+                        g = int(217 * (1 - ratio * 0.3))
+                        b = int(100 * (1 - ratio * 0.3))
+                        pygame.draw.line(fill_surface, (r, g, b), (0, y), (fill_width, y))
+                    
+                    self.screen.blit(fill_surface, progress_fill_rect)
+                    
+                    # 添加内边框高光
+                    pygame.draw.rect(self.screen, self.LIGHT_GREEN, progress_fill_rect.inflate(-1, -1), 1)
     
     def get_generation_stage_text(self):
         """获取AI生成的阶段文字"""

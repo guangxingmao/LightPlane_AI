@@ -28,9 +28,9 @@ class CustomGamePage:
 
         # 设置窗口的标题
         if custom_config:
-            pygame.display.set_caption('LightPlane Fighter - Custom Mode')
+            pygame.display.set_caption('战机大战 - 自定义模式')
         else:
-            pygame.display.set_caption('LightPlane Fighter - Traditional Mode')
+            pygame.display.set_caption('战机大战 - 传统模式')
             
         # 创建游戏时钟
         self.clock = pygame.time.Clock()

@@ -25,12 +25,19 @@ class CustomConfigPage:
     
     def initialize_config(self, preserve_cache=False):
         """Initialize configuration page"""
-        print("Initializing custom configuration page...")
+        print("正在初始化自定义配置页面...")
         
-        # Fonts
-        self.title_font = pygame.font.Font(None, 48)
-        self.text_font = pygame.font.Font(None, 32)
-        self.small_font = pygame.font.Font(None, 24)
+        # Fonts - 使用字体管理器支持中文
+        try:
+            from font_manager import get_chinese_font
+            self.title_font = get_chinese_font(48)
+            self.text_font = get_chinese_font(32)
+            self.small_font = get_chinese_font(24)
+        except ImportError:
+            # 如果字体管理器不可用，回退到默认字体
+            self.title_font = pygame.font.Font(None, 48)
+            self.text_font = pygame.font.Font(None, 32)
+            self.small_font = pygame.font.Font(None, 24)
         
         # Colors
         self.WHITE = (255, 255, 255)
@@ -68,9 +75,9 @@ class CustomConfigPage:
                 'enemy_plane': None,
                 'background': None
             }
-            print("Configuration cache reset")
+            print("配置缓存已重置")
         else:
-            print("Preserving existing configuration cache")
+            print("保留现有配置缓存")
         
         # Reset input boxes
         self.input_boxes = []
@@ -101,6 +108,9 @@ class CustomConfigPage:
         # Initialize AI image processor
         self.ai_processor = AIImageProcessor()
         
+        # 创建文本渲染辅助函数
+        self.render_text = self._create_render_text_function()
+        
         # Create UI elements
         self.create_ui_elements()
         
@@ -112,6 +122,24 @@ class CustomConfigPage:
         self.background = self.load_background()
         
         print("Custom configuration page initialization completed")
+    
+    def _create_render_text_function(self):
+        """创建文本渲染辅助函数，优先使用字体管理器"""
+        try:
+            from font_manager import render_chinese_text
+            return lambda text, size, color, antialias=True: render_chinese_text(text, size, color, antialias)
+        except ImportError:
+            # 如果字体管理器不可用，使用默认字体渲染
+            def fallback_render(text, size, color, antialias=True):
+                # 根据size选择合适的字体
+                if size >= 40:
+                    font = self.title_font
+                elif size >= 25:
+                    font = self.text_font
+                else:
+                    font = self.small_font
+                return font.render(text, antialias, color)
+            return fallback_render
     
     def restore_preview_images(self):
         """Restore preview images to preview areas"""
@@ -162,7 +190,7 @@ class CustomConfigPage:
         start_x = 60
         
         # Column titles
-        titles = ['Player Plane', 'Enemy Plane', 'Background']
+        titles = ['玩家战机', '敌机', '背景']
         
         for i, (image_type, prompt) in enumerate(self.default_prompts.items()):
             x = start_x + i * column_width
@@ -185,7 +213,7 @@ class CustomConfigPage:
             # Clear button position adjustment
             clear_button = {
                 'rect': pygame.Rect(x + input_width + 10, y + (input_height - 30) // 2, 60, 30),
-                'text': 'Clear',
+                'text': '清除',
                 'type': f'clear_{image_type}'
             }
             self.buttons[f'clear_{image_type}'] = clear_button
@@ -247,7 +275,7 @@ class CustomConfigPage:
             # Upload button
             upload_button = {
                 'rect': pygame.Rect(buttons_start_x, y, 90, 35),
-                'text': 'Upload',
+                'text': '上传',
                 'type': f'upload_{image_type}'
             }
             self.buttons[f'upload_{image_type}'] = upload_button
@@ -255,7 +283,7 @@ class CustomConfigPage:
             # AI Gen button - to the right of upload button
             ai_gen_button = {
                 'rect': pygame.Rect(buttons_start_x + 110, y, 90, 35),
-                'text': 'AI Gen',
+                'text': 'AI生成',
                 'type': f'ai_gen_{image_type}'
             }
             self.buttons[f'ai_gen_{image_type}'] = ai_gen_button
@@ -271,7 +299,7 @@ class CustomConfigPage:
         # Back button - improved style, placed in top-left corner, smaller size
         back_button = {
             'rect': pygame.Rect(60, button_y, 120, 40),  # Changed from 140x50 to 120x40
-            'text': 'Back',
+            'text': '返回',
             'type': 'back'
         }
         self.buttons['back'] = back_button
@@ -279,7 +307,7 @@ class CustomConfigPage:
         # Complete button - improved style, placed in top-right corner, smaller size
         complete_button = {
             'rect': pygame.Rect(self.width - 180, button_y, 120, 40),  # Changed from 140x50 to 120x40, position adjusted accordingly
-            'text': 'Complete',
+            'text': '完成',
             'type': 'complete'
         }
         self.buttons['complete'] = complete_button
@@ -366,7 +394,7 @@ class CustomConfigPage:
     def handle_button_click(self, button_type):
         """Handle button clicks"""
         if button_type == 'back':
-            print("Clicked Back button, clearing cache and returning to main menu")
+            print("点击了返回按钮，清除缓存并返回主菜单")
             self.clear_cache()
             return 'back'
         
@@ -381,17 +409,17 @@ class CustomConfigPage:
         
         elif button_type.startswith('upload_'):
             image_type = button_type.replace('upload_', '')
-            print(f"Clicked Upload button: {image_type}")
+            print(f"点击了上传按钮: {image_type}")
             self.start_upload(image_type)
         
         elif button_type.startswith('ai_gen_'):
             image_type = button_type.replace('ai_gen_', '')
-            print(f"Clicked AI Gen button: {image_type}")
+            print(f"点击了AI生成按钮: {image_type}")
             self.start_ai_generation(image_type)
         
         elif button_type.startswith('clear_'):
             image_type = button_type.replace('clear_', '')
-            print(f"Clicked Clear button: {image_type}")
+            print(f"点击了清除按钮: {image_type}")
             self.clear_input_text(image_type)
         
         # 背景去除现在自动处理，不需要手动按钮
@@ -412,12 +440,12 @@ class CustomConfigPage:
     
     def start_upload(self, image_type):
         """Start upload"""
-        print(f"Starting upload of {image_type} image...")
+        print(f"开始上传 {image_type} 图片...")
         
         def upload_thread():
             try:
-                # Show upload status
-                self.show_status(f"Selecting {image_type} image...", self.BLUE)
+                # 显示上传状态
+                self.show_status(f"正在选择 {image_type} 图片...", self.BLUE)
                 
                 # Call file selector
                 file_path = select_file(image_type)
@@ -428,14 +456,14 @@ class CustomConfigPage:
                 else:
                     if file_path:
                         print(f"File does not exist: {file_path}")
-                        self.show_status(f"File does not exist: {file_path}", self.RED)
+                        self.show_status(f"文件不存在: {file_path}", self.RED)
                     else:
-                        print("User cancelled file selection")
-                        self.show_status("File selection cancelled", self.BLUE)
+                        print("用户取消了文件选择")
+                        self.show_status("文件选择已取消", self.BLUE)
                         
             except Exception as e:
                 print(f"Upload failed: {e}")
-                self.show_status(f"Upload failed: {str(e)}", self.RED)
+                self.show_status(f"上传失败: {str(e)}", self.RED)
         
         # Start upload thread
         threading.Thread(target=upload_thread, daemon=True).start()
@@ -443,19 +471,19 @@ class CustomConfigPage:
     def start_background_removal(self, image_type):
         """Start background removal process"""
         if image_type not in ['player_plane', 'enemy_plane']:
-            self.show_status("Background removal only works on airplane images", self.RED)
+            self.show_status("背景去除功能仅适用于飞机图片", self.RED)
             return
         
         if image_type not in self.config_cache or not self.config_cache[image_type]:
-            self.show_status(f"Please upload or generate first {image_type} picture", self.RED)
+            self.show_status(f"请先上传或生成 {image_type} 图片", self.RED)
             return
         
-        print(f"Starting background removal for {image_type}...")
+        print(f"开始为 {image_type} 去除背景...")
         
         def background_removal_thread():
             try:
                 # Show processing status
-                self.show_status(f"Processing {image_type} background removal...", self.BLUE)
+                self.show_status(f"正在处理 {image_type} 背景去除...", self.BLUE)
                 
                 # Get current image
                 current_image = self.config_cache[image_type]
@@ -471,11 +499,11 @@ class CustomConfigPage:
                             preview_image = pygame.transform.smoothscale(result['pygame_surface'], preview_size)
                             self.preview_areas[image_type]['image'] = preview_image
                         
-                        self.show_status(f"{image_type} Background removal completed!", self.GREEN)
+                        self.show_status(f"{image_type} 背景去除完成!", self.GREEN)
                         self.force_redraw = True
                         print(f"Background removal completed for {image_type}")
                     else:
-                        self.show_status(f"{image_type} Background removal failed: {result['error']}", self.RED)
+                        self.show_status(f"{image_type} 背景去除失败: {result['error']}", self.RED)
                         print(f"Background removal failed for {image_type}: {result['error']}")
                 
                 # Start background removal
@@ -487,7 +515,7 @@ class CustomConfigPage:
                 
             except Exception as e:
                 print(f"Background removal failed: {e}")
-                self.show_status(f"Background removal failed: {str(e)}", self.RED)
+                self.show_status(f"背景去除失败: {str(e)}", self.RED)
         
         # Start background removal thread
         threading.Thread(target=background_removal_thread, daemon=True).start()
@@ -499,7 +527,7 @@ class CustomConfigPage:
         if image_type not in ['player_plane', 'enemy_plane']:
             return
         
-        print(f"automatic removal {image_type} background...")
+        print(f"自动去除 {image_type} 背景...")
         
         def auto_background_removal_thread():
             try:
@@ -517,11 +545,11 @@ class CustomConfigPage:
                             preview_image = pygame.transform.smoothscale(result['pygame_surface'], preview_size)
                             self.preview_areas[image_type]['image'] = preview_image
                         
-                        self.show_status(f"{image_type} Automatic background removal completed!", self.GREEN)
+                        self.show_status(f"{image_type} 自动背景去除完成!", self.GREEN)
                         self.force_redraw = True
                         print(f"Automatic background removal completed: {image_type}")
                     else:
-                        self.show_status(f"{image_type} Automatic background removal failed: {result['error']}", self.RED)
+                        self.show_status(f"{image_type} 自动背景去除失败: {result['error']}", self.RED)
                         print(f"Automatic background removal failed: {image_type}: {result['error']}")
                 
                 # 开始背景去除
@@ -533,7 +561,7 @@ class CustomConfigPage:
                 
             except Exception as e:
                 print(f"Automatic background removal failed: {e}")
-                self.show_status(f"Automatic background removal failed: {str(e)}", self.RED)
+                self.show_status(f"自动背景去除失败: {str(e)}", self.RED)
         
         # 启动自动背景去除线程
         threading.Thread(target=auto_background_removal_thread, daemon=True).start()
@@ -584,8 +612,8 @@ class CustomConfigPage:
                 width = ((gen_width + 7) // 8) * 8
                 height = ((gen_height + 7) // 8) * 8
                 
-                print(f"Target size: {original_width}x{original_height}")
-                print(f"Generation size (improved quality): {width}x{height}")
+                print(f"目标尺寸: {original_width}x{original_height}")
+                print(f"生成尺寸(提升质量): {width}x{height}")
                 
                 # Generate image - increase steps to improve quality
                 self.generation_progress = 5
@@ -622,7 +650,7 @@ class CustomConfigPage:
                 
                 if image:
                     # Always need to scale to target size (because we used larger generation size)
-                    print(f"Scaling image: {width}x{height} -> {target_size}")
+                    print(f"缩放图片: {width}x{height} -> {target_size}")
                     # Use high-quality scaling algorithm
                     scaled_image = pygame.transform.smoothscale(image, target_size)
                     
@@ -632,27 +660,27 @@ class CustomConfigPage:
                         preview_size = self.preview_areas[image_type].get('preview_size', (target_size[0] * 3, target_size[1] * 3))
                         preview_image = pygame.transform.smoothscale(scaled_image, preview_size)
                         self.preview_areas[image_type]['image'] = preview_image
-                        print(f"Updated AI preview area: {image_type}, preview size: {preview_size}")
+                        print(f"已更新AI预览区域: {image_type}, 预览尺寸: {preview_size}")
                     
                     # Update configuration cache (save target size image)
                     self.config_cache[image_type] = scaled_image
                     # 设置图片来源标识为AI生成
                     self.image_sources[image_type] = 'ai_generated'
-                    print(f"Updated AI configuration cache: {image_type}, target size: {target_size}")
-                    print(f"Image source marked as: {self.image_sources[image_type]}")
+                    print(f"已更新AI配置缓存: {image_type}, 目标尺寸: {target_size}")
+                    print(f"图片来源标记为: {self.image_sources[image_type]}")
                     
-                    self.show_status(f"{image_type} AI generation successful!", self.GREEN)
+                    self.show_status(f"{image_type} AI生成成功!", self.GREEN)
                     
                     # 自动去除背景（仅对飞机图片）
                     if image_type in ['player_plane', 'enemy_plane']:
-                        self.show_status(f"Removing automatically {image_type} background...", self.BLUE)
+                        self.show_status(f"正在自动去除 {image_type} 背景...", self.BLUE)
                         self.auto_remove_background(image_type, scaled_image)
                 else:
-                    self.show_status(f"{image_type} AI generation failed", self.RED)
+                    self.show_status(f"{image_type} AI生成失败", self.RED)
                 
             except Exception as e:
                 print(f"AI generation failed: {e}")
-                self.show_status(f"AI generation failed: {e}", self.RED)
+                self.show_status(f"AI生成失败: {e}", self.RED)
             finally:
                 self.generating = False
                 self.generation_progress = 0
@@ -710,25 +738,25 @@ class CustomConfigPage:
     def process_uploaded_file(self, image_type, file_path):
         """Process uploaded file"""
         try:
-            print(f"Processing uploaded file: {image_type} - {file_path}")
+            print(f"正在处理上传的文件: {image_type} - {file_path}")
             
             if not os.path.exists(file_path):
-                self.show_status(f"File does not exist: {file_path}", self.RED)
+                self.show_status(f"文件不存在: {file_path}", self.RED)
                 return
             
             # Check file type
             valid_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
             file_ext = os.path.splitext(file_path.lower())[1]
             if file_ext not in valid_extensions:
-                self.show_status(f"Unsupported file format: {file_ext}", self.RED)
+                self.show_status(f"不支持的文件格式: {file_ext}", self.RED)
                 return
             
             # Load image
             try:
                 image = pygame.image.load(file_path)
-                print(f"Successfully loaded image, original size: {image.get_size()}")
+                print(f"图片加载成功，原始尺寸: {image.get_size()}")
             except pygame.error as e:
-                self.show_status(f"Cannot load image: {str(e)}", self.RED)
+                self.show_status(f"无法加载图片: {str(e)}", self.RED)
                 return
             
             # Get target size
@@ -737,7 +765,7 @@ class CustomConfigPage:
             
             # Scale image to target size - use high-quality scaling
             scaled_image = pygame.transform.smoothscale(image, target_size)
-            print(f"Image scaled to target size: {target_size}")
+            print(f"图片已缩放到目标尺寸: {target_size}")
             
             # Update preview area (scale to preview size)
             if image_type in self.preview_areas:
@@ -751,23 +779,23 @@ class CustomConfigPage:
             self.config_cache[image_type] = preview_image
             # 设置图片来源标识为上传
             self.image_sources[image_type] = 'uploaded'
-            print(f"Updated configuration cache: {image_type}, target size: {target_size}")
-            print(f"Image source marked as: {self.image_sources[image_type]}")
+            print(f"已更新配置缓存: {image_type}, 目标尺寸: {target_size}")
+            print(f"图片来源标记为: {self.image_sources[image_type]}")
             
             # Show success message
-            self.show_status(f"{image_type} upload successful!", self.GREEN)
+            self.show_status(f"{image_type} 上传成功!", self.GREEN)
             self.force_redraw = True
             
             # 自动去除背景（仅对飞机图片）
             if image_type in ['player_plane', 'enemy_plane']:
-                self.show_status(f"Removing automatically {image_type} background...", self.BLUE)
+                self.show_status(f"正在自动去除 {image_type} 背景...", self.BLUE)
                 self.auto_remove_background(image_type, scaled_image)
             
         except Exception as e:
             print(f"Failed to process uploaded file: {e}")
             import traceback
             traceback.print_exc()
-            self.show_status(f"Failed to process file: {str(e)}", self.RED)
+            self.show_status(f"文件处理失败: {str(e)}", self.RED)
     
     def draw(self):
         """Draw page"""
@@ -778,7 +806,7 @@ class CustomConfigPage:
             self.screen.fill(self.BLACK)
         
         # Draw title
-        title = self.title_font.render("Custom Configuration", True, self.WHITE)
+        title = self.render_text("自定义配置", 48, self.WHITE)
         title_rect = title.get_rect(center=(self.width // 2, 50))
         self.screen.blit(title, title_rect)
         
@@ -809,7 +837,7 @@ class CustomConfigPage:
         """Draw input boxes"""
         for i, input_box in enumerate(self.input_boxes):
             # Draw column title - horizontally centered with input box
-            title_text = self.text_font.render(input_box['title'], True, self.WHITE)
+            title_text = self.render_text(input_box['title'], 32, self.WHITE)
             title_rect = title_text.get_rect(
                 centerx=input_box['rect'].centerx,  # Horizontal center
                 y=input_box['rect'].y - 35
@@ -851,7 +879,7 @@ class CustomConfigPage:
                 pygame.draw.rect(self.screen, (220, 80, 80), clear_button['rect'])
                 pygame.draw.rect(self.screen, self.BLACK, clear_button['rect'], 2)
                 
-                clear_text = self.small_font.render(clear_button['text'], True, self.WHITE)
+                clear_text = self.render_text(clear_button['text'], 24, self.WHITE)
                 clear_rect = clear_text.get_rect(center=clear_button['rect'].center)
                 self.screen.blit(clear_text, clear_rect)
     
@@ -949,13 +977,13 @@ class CustomConfigPage:
                 self.screen.blit(scaled_image, image_rect)
             else:
                 # Display "No Image" - no background color
-                no_image_text = self.text_font.render("No Image", True, self.DARK_GRAY)
+                no_image_text = self.render_text("无图片", 32, self.DARK_GRAY)
                 no_image_rect = no_image_text.get_rect(center=rect.center)
                 self.screen.blit(no_image_text, no_image_rect)
             
             # Display size information
-            size_text = f"Target: {size[0]}x{size[1]}"
-            size_surface = self.small_font.render(size_text, True, self.WHITE)
+            size_text = f"目标: {size[0]}x{size[1]}"
+            size_surface = self.render_text(size_text, 24, self.WHITE)
             size_rect = size_surface.get_rect(
                 x=rect.x,
                 y=rect.bottom + 15
@@ -963,8 +991,8 @@ class CustomConfigPage:
             self.screen.blit(size_surface, size_rect)
             
             # Display preview size
-            preview_text = f"Preview: {preview_size[0]}x{preview_size[1]}"
-            preview_surface = self.small_font.render(preview_text, True, self.WHITE)
+            preview_text = f"预览: {preview_size[0]}x{preview_size[1]}"
+            preview_surface = self.render_text(preview_text, 24, self.WHITE)
             preview_rect = preview_surface.get_rect(
                 x=rect.x,
                 y=size_rect.bottom + 5
@@ -1020,8 +1048,8 @@ class CustomConfigPage:
             pygame.draw.rect(self.screen, highlight_color, highlight_rect)
             
             # 按钮文字
-            font_size = self.small_font if len(button['text']) > 8 else self.text_font
-            button_text = font_size.render(button['text'], True, self.WHITE)
+            font_size = 24 if len(button['text']) > 8 else 32
+            button_text = self.render_text(button['text'], font_size, self.WHITE)
             button_text_rect = button_text.get_rect(center=button['rect'].center)
             self.screen.blit(button_text, button_text_rect)
     
@@ -1034,7 +1062,7 @@ class CustomConfigPage:
             pygame.draw.rect(self.screen, self.BLACK, status_rect, 2)
             
             # 状态文字
-            status_text = self.text_font.render(self.status_message, True, self.WHITE)
+            status_text = self.render_text(self.status_message, 32, self.WHITE)
             status_text_rect = status_text.get_rect(center=status_rect.center)
             self.screen.blit(status_text, status_text_rect)
     
@@ -1079,8 +1107,8 @@ class CustomConfigPage:
             
             # 进度文字 - 居中显示，包含阶段信息
             stage_text = self.get_generation_stage_text()
-            progress_text = f"AI generating... {self.generation_progress}% - {stage_text}"
-            progress_surface = self.text_font.render(progress_text, True, self.WHITE)
+            progress_text = f"AI生成中... {self.generation_progress}% - {stage_text}"
+            progress_surface = self.render_text(progress_text, 32, self.WHITE)
             progress_text_rect = progress_surface.get_rect(center=(self.width // 2, progress_y + progress_height + 30))
             self.screen.blit(progress_surface, progress_text_rect)
     
@@ -1105,13 +1133,13 @@ class CustomConfigPage:
             
             # Status text
             if status['is_processing']:
-                status_text = f"AI processing: {status['message']} ({status['progress']}%)"
+                status_text = f"AI处理中: {status['message']} ({status['progress']}%)"
                 text_color = self.BLUE
             else:
-                status_text = f"in queue: {status['queue_length']} tasks waiting to be processed"
+                status_text = f"队列中: {status['queue_length']} 个任务等待处理"
                 text_color = self.GRAY
             
-            status_surface = self.text_font.render(status_text, True, text_color)
+            status_surface = self.render_text(status_text, 32, text_color)
             status_rect_text = status_surface.get_rect(center=status_rect.center)
             self.screen.blit(status_surface, status_rect_text)
             
@@ -1135,17 +1163,17 @@ class CustomConfigPage:
     def get_generation_stage_text(self):
         """获取AI生成的阶段文字"""
         if self.generation_progress <= 5:
-            return "Preparing..."
+            return "准备中..."
         elif self.generation_progress <= 20:
-            return "Loading model..."
+            return "加载模型中..."
         elif self.generation_progress <= 40:
-            return "Textencoding..."
+            return "文本编码中..."
         elif self.generation_progress <= 90:
-            return "Diffusion in progress..."
+            return "扩散处理中..."
         elif self.generation_progress <= 95:
-            return "Image generation..."
+            return "图片生成中..."
         else:
-            return "Post-processing..."
+            return "后处理中..."
     
     def run(self):
         """运行配置页面 - 用于与启动器集成"""

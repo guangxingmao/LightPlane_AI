@@ -323,6 +323,9 @@ class BackgroundRemover:
                 if complexity_score > 70:
                     output_array = self._restore_ai_details(output_array, original_image_path)
                 
+                # 新增：去除黑色阴影优化
+                output_array = self._remove_black_shadows(output_array)
+                
             # 转换回PIL Image
             optimized_image = Image.fromarray(output_array, 'RGBA')
             
@@ -365,31 +368,31 @@ class BackgroundRemover:
             # 创建前景掩码
             foreground_mask = alpha > 128
             
-            # 根据复杂度调整扩展参数
+            # 根据复杂度调整扩展参数 - 微调优化版本
             if complexity_score > 80:
-                # 极高复杂度：最激进的扩展
-                kernel_size = 11
-                iterations = 4
-                blur_sigma = 5
-                print(f"🔴 极高复杂度，使用最激进前景扩展")
-            elif complexity_score > 70:
-                # 高复杂度：激进扩展
-                kernel_size = 9
-                iterations = 3
-                blur_sigma = 4
-                print(f"🟠 高复杂度，使用激进前景扩展")
-            elif complexity_score > 50:
-                # 中等复杂度：平衡扩展
-                kernel_size = 7
-                iterations = 2
-                blur_sigma = 3
-                print(f"🟡 中等复杂度，使用平衡前景扩展")
-            else:
-                # 低复杂度：保守扩展
-                kernel_size = 5
+                # 极高复杂度：轻微扩展
+                kernel_size = 3
                 iterations = 1
-                blur_sigma = 2
-                print(f"🟢 低复杂度，使用保守前景扩展")
+                blur_sigma = 1
+                print(f"🔴 极高复杂度，使用轻微前景扩展")
+            elif complexity_score > 70:
+                # 高复杂度：很轻微扩展
+                kernel_size = 3
+                iterations = 1
+                blur_sigma = 0.8
+                print(f"🟠 高复杂度，使用很轻微前景扩展")
+            elif complexity_score > 50:
+                # 中等复杂度：几乎不扩展
+                kernel_size = 3
+                iterations = 1
+                blur_sigma = 0.5
+                print(f"🟡 中等复杂度，几乎不扩展")
+            else:
+                # 低复杂度：完全不扩展
+                kernel_size = 1
+                iterations = 0
+                blur_sigma = 0
+                print(f"🟢 低复杂度，完全不扩展")
             
             # 使用形态学膨胀操作扩大前景
             kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -425,39 +428,39 @@ class BackgroundRemover:
     def _smooth_edges_smart(self, alpha, complexity_score):
         """智能边缘平滑，根据复杂度调整策略"""
         try:
-            # 根据复杂度调整边缘平滑参数
+            # 根据复杂度调整边缘平滑参数 - 微调优化版本
             if complexity_score > 80:
-                # 极高复杂度：更精细的边缘处理
-                bilateral_d = 11
-                bilateral_sigma_color = 100
-                bilateral_sigma_space = 100
+                # 极高复杂度：很轻微边缘处理
+                bilateral_d = 3
+                bilateral_sigma_color = 30
+                bilateral_sigma_space = 30
                 gaussian_kernel = 3
-                gaussian_sigma = 0.3
-                print(f"🔴 极高复杂度，使用精细边缘平滑")
+                gaussian_sigma = 0.1
+                print(f"🔴 极高复杂度，使用很轻微边缘平滑")
             elif complexity_score > 70:
-                # 高复杂度：精细边缘处理
-                bilateral_d = 9
-                bilateral_sigma_color = 75
-                bilateral_sigma_space = 75
+                # 高复杂度：几乎不平滑
+                bilateral_d = 3
+                bilateral_sigma_color = 25
+                bilateral_sigma_space = 25
                 gaussian_kernel = 3
-                gaussian_sigma = 0.5
-                print(f"🟠 高复杂度，使用精细边缘平滑")
+                gaussian_sigma = 0.05
+                print(f"🟠 高复杂度，几乎不平滑")
             elif complexity_score > 50:
-                # 中等复杂度：平衡边缘处理
-                bilateral_d = 9
-                bilateral_sigma_color = 75
-                bilateral_sigma_space = 75
-                gaussian_kernel = 5
-                gaussian_sigma = 1
-                print(f"🟡 中等复杂度，使用平衡边缘平滑")
+                # 中等复杂度：几乎不平滑
+                bilateral_d = 3
+                bilateral_sigma_color = 20
+                bilateral_sigma_space = 20
+                gaussian_kernel = 3
+                gaussian_sigma = 0.02
+                print(f"🟡 中等复杂度，几乎不平滑")
             else:
-                # 低复杂度：标准边缘处理
-                bilateral_d = 9
-                bilateral_sigma_color = 75
-                bilateral_sigma_space = 75
-                gaussian_kernel = 5
-                gaussian_sigma = 1
-                print(f"🟢 低复杂度，使用标准边缘平滑")
+                # 低复杂度：完全不平滑
+                bilateral_d = 1
+                bilateral_sigma_color = 10
+                bilateral_sigma_space = 10
+                gaussian_kernel = 1
+                gaussian_sigma = 0.01
+                print(f"🟢 低复杂度，完全不平滑")
             
             # 使用双边滤波保持边缘的同时平滑区域
             smoothed = cv2.bilateralFilter(alpha, bilateral_d, bilateral_sigma_color, bilateral_sigma_space)
@@ -492,33 +495,90 @@ class BackgroundRemover:
             print(f"⚠ 色彩增强失败: {e}")
             return rgba_array
     
+    def _remove_black_shadows(self, rgba_array):
+        """去除黑色阴影，优化抠图边缘 - 平衡版本"""
+        try:
+            # 提取Alpha通道
+            alpha = rgba_array[:, :, 3]
+            
+            # 创建前景掩码 - 微调优化版本
+            foreground_mask = alpha > 80  # 进一步提高阈值，只处理核心前景区域
+            
+            # 对前景区域进行黑色阴影检测和去除
+            rgb = rgba_array[:, :, :3]
+            
+            # 检测黑色像素（RGB值都很低）- 更严格的阈值
+            black_threshold = 15  # 进一步降低阈值，只处理真正的深黑色像素
+            black_pixels = np.all(rgb < black_threshold, axis=2)
+            
+            # 只在前景区域内处理黑色像素
+            black_in_foreground = black_pixels & foreground_mask
+            
+            if np.any(black_in_foreground):
+                print(f"🔍 检测到 {np.sum(black_in_foreground)} 个黑色像素，开始精确优化...")
+                
+                # 方法1: 更精确的透明度调整
+                rgba_array[black_in_foreground, 3] = np.clip(alpha[black_in_foreground] * 0.8, 0, 255)
+                
+                # 方法2: 只对真正的边缘进行极轻微修复
+                edge_mask = (alpha > 80) & (alpha < 120)  # 更窄的边缘范围
+                if np.any(edge_mask):
+                    print(f"🔧 对 {np.sum(edge_mask)} 个边缘像素进行极轻微修复...")
+                    
+                    # 使用更小的邻域，减少影响范围
+                    for i in range(1, rgba_array.shape[0] - 1):
+                        for j in range(1, rgba_array.shape[1] - 1):
+                            if edge_mask[i, j]:
+                                # 获取周围3x3区域的有效像素
+                                neighborhood = rgba_array[max(0, i-1):min(rgba_array.shape[0], i+2),
+                                                        max(0, j-1):min(rgba_array.shape[1], j+2)]
+                                valid_pixels = neighborhood[neighborhood[:, :, 3] > 180]  # 更高的透明度要求
+                                
+                                if len(valid_pixels) > 0:
+                                    # 使用加权平均，保持原有颜色特征
+                                    weights = valid_pixels[:, 3] / 255.0  # 使用透明度作为权重
+                                    weighted_avg = np.average(valid_pixels[:, :3], axis=0, weights=weights)
+                                    
+                                    # 混合原有颜色和修复颜色，保持85%原有特征
+                                    original_color = rgba_array[i, j, :3]
+                                    rgba_array[i, j, :3] = (original_color * 0.85 + weighted_avg * 0.15).astype(np.uint8)
+                                    rgba_array[i, j, 3] = alpha[i, j]  # 保持原有透明度
+                
+                print(f"✅ 精确黑色阴影优化完成")
+            
+            return rgba_array
+            
+        except Exception as e:
+            print(f"⚠ 黑色阴影去除失败: {e}")
+            return rgba_array
+    
     def _enhance_colors_smart(self, rgba_array, complexity_score):
         """智能色彩增强，根据复杂度调整策略"""
         try:
             # 只处理RGB通道
             rgb = rgba_array[:, :, :3].astype(np.float32)
             
-            # 根据复杂度调整色彩增强参数
+            # 根据复杂度调整色彩增强参数 - 微调优化版本
             if complexity_score > 80:
-                # 极高复杂度：最强色彩增强
-                saturation_factor = 1.4
-                brightness_factor = 1.2
-                print(f"🔴 极高复杂度，使用最强色彩增强")
+                # 极高复杂度：轻微色彩增强
+                saturation_factor = 1.08
+                brightness_factor = 1.03
+                print(f"🔴 极高复杂度，使用轻微色彩增强")
             elif complexity_score > 70:
-                # 高复杂度：强色彩增强
-                saturation_factor = 1.3
-                brightness_factor = 1.15
-                print(f"🟠 高复杂度，使用强色彩增强")
+                # 高复杂度：很轻微色彩增强
+                saturation_factor = 1.05
+                brightness_factor = 1.02
+                print(f"🟠 高复杂度，使用很轻微色彩增强")
             elif complexity_score > 50:
-                # 中等复杂度：中等色彩增强
-                saturation_factor = 1.2
-                brightness_factor = 1.1
-                print(f"🟡 中等复杂度，使用中等色彩增强")
+                # 中等复杂度：几乎不增强
+                saturation_factor = 1.02
+                brightness_factor = 1.01
+                print(f"🟡 中等复杂度，几乎不增强")
             else:
-                # 低复杂度：轻微色彩增强
-                saturation_factor = 1.1
-                brightness_factor = 1.05
-                print(f"🟢 低复杂度，使用轻微色彩增强")
+                # 低复杂度：完全不增强
+                saturation_factor = 1.0
+                brightness_factor = 1.0
+                print(f"🟢 低复杂度，完全不增强")
             
             # 转换为HSV
             hsv = cv2.cvtColor(rgb.astype(np.uint8), cv2.COLOR_RGB2HSV).astype(np.float32)

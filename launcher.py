@@ -2,6 +2,9 @@ import pygame
 import sys
 import os
 
+# 导入字体管理器
+from font_manager import render_chinese_text, get_chinese_font
+
 # 尝试导入游戏相关模块
 try:
     from plane_sprites import *
@@ -51,7 +54,7 @@ pygame.init()
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption('LightPlane Fighter - Game Launcher')
+pygame.display.set_caption('战机大战 - 游戏启动器')
 
 # 颜色定义
 WHITE = (255, 255, 255)
@@ -64,37 +67,46 @@ YELLOW = (255, 255, 0)
 GRAY = (128, 128, 128)
 
 def safe_render_text(font, text, color):
-    """安全地渲染文本，如果字体失败则使用备用方案"""
-    if font is None:
-        # 如果字体为None，尝试使用最基本的字体
+    """安全地渲染文本，优先使用字体管理器支持中文"""
+    try:
+        # 优先使用字体管理器渲染中文
+        return render_chinese_text(text, None, color)
+    except Exception as e:
+        print(f"字体管理器渲染失败: {e}")
+        # 回退到原来的字体渲染方式
+        if font is None:
+            # 如果字体为None，尝试使用最基本的字体
+            try:
+                basic_font = pygame.font.Font(None, 24)
+                return basic_font.render(text, True, color)
+            except:
+                # 如果还是失败，返回一个简单的矩形
+                surface = pygame.Surface((len(text) * 10, 20))
+                surface.fill(color)
+                return surface
+        
         try:
-            basic_font = pygame.font.Font(None, 24)
-            return basic_font.render(text, True, color)
-        except:
-            # 如果还是失败，返回一个简单的矩形
+            return font.render(text, True, color)
+        except Exception as e:
+            print(f"文本渲染失败: {e}")
+            # 返回一个简单的矩形作为备用
             surface = pygame.Surface((len(text) * 10, 20))
             surface.fill(color)
             return surface
-    
-    try:
-        return font.render(text, True, color)
-    except Exception as e:
-        print(f"文本渲染失败: {e}")
-        # 返回一个简单的矩形作为备用
-        surface = pygame.Surface((len(text) * 10, 20))
-        surface.fill(color)
-        return surface
 
 def get_simple_font(size):
-    """获取简单的系统字体，不进行中文测试"""
+    """获取支持中文的字体"""
     try:
-        # 直接使用系统默认字体
-        return pygame.font.SysFont(None, size)
+        return get_chinese_font(size)
     except:
         try:
-            return pygame.font.Font(None, size)
+            # 回退到系统字体
+            return pygame.font.SysFont(None, size)
         except:
-            return None
+            try:
+                return pygame.font.Font(None, size)
+            except:
+                return None
 
 # 字体设置
 title_font = pygame.font.SysFont("arial", 48)
@@ -227,11 +239,11 @@ class GameManager:
         center_x = SCREEN_WIDTH // 2 - button_width // 2
         
         buttons = [
-            Button(center_x, 200, button_width, button_height, "Traditional Mode", LIGHT_BLUE, BLUE),
-            Button(center_x, 280, button_width, button_height, "Dual Player Mode", GREEN, (0, 200, 0)),
-            Button(center_x, 360, button_width, button_height, "AI Mode", YELLOW, (200, 200, 0)),
-            Button(center_x, 440, button_width, button_height, "Custom Mode", RED, (200, 0, 0)),
-            # Button(center_x, 520, button_width, button_height, "Easter Egg Mode", (255, 20, 147), (255, 105, 180))
+            Button(center_x, 200, button_width, button_height, "传统模式", LIGHT_BLUE, BLUE),
+            Button(center_x, 280, button_width, button_height, "双人模式", GREEN, (0, 200, 0)),
+            Button(center_x, 360, button_width, button_height, "AI模式", YELLOW, (200, 200, 0)),
+            Button(center_x, 440, button_width, button_height, "自定义模式", RED, (200, 0, 0)),
+            # Button(center_x, 520, button_width, button_height, "彩蛋模式", (255, 20, 147), (255, 105, 180))
         ]
         
         # 绘制主菜单
@@ -268,17 +280,17 @@ class GameManager:
         self.draw_background()
         
         # 绘制标题
-        title_text = safe_render_text(self.title_font, "LightPlane Fighter 3.0", WHITE)
+        title_text = safe_render_text(self.title_font, "战机大战 3.0", WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, 100))
         
         # 添加标题阴影效果
-        shadow_text = safe_render_text(self.title_font, "LightPlane Fighter 3.0", BLACK)
+        shadow_text = safe_render_text(self.title_font, "战机大战 3.0", BLACK)
         shadow_rect = shadow_text.get_rect(center=(SCREEN_WIDTH // 2 + 3, 103))
         self.screen.blit(shadow_text, shadow_rect)
         self.screen.blit(title_text, title_rect)
         
         # 绘制副标题
-        subtitle_text = safe_render_text(self.info_font, "Select Game Mode to Start", WHITE)
+        subtitle_text = safe_render_text(self.info_font, "选择游戏模式开始游戏", WHITE)
         subtitle_rect = subtitle_text.get_rect(center=(SCREEN_WIDTH // 2, 150))
         self.screen.blit(subtitle_text, subtitle_rect)
         
@@ -287,7 +299,7 @@ class GameManager:
             button.draw(self.screen)
         
         # 绘制底部信息
-        info_text = safe_render_text(self.small_font, "Press ESC to Return to Main Menu", WHITE)
+        info_text = safe_render_text(self.small_font, "按ESC键返回主菜单", WHITE)
         info_rect = info_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30))
         self.screen.blit(info_text, info_rect)
     
@@ -317,7 +329,7 @@ class GameManager:
         if not self.dual_game_page:
             # 如果双人游戏页面未加载，显示错误信息
             self.draw_background()
-            error_text = safe_render_text(self.info_font, "Dual Game Module Loading Failed", RED)
+            error_text = safe_render_text(self.info_font, "双人游戏模块加载失败", RED)
             error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(error_text, error_rect)
             
@@ -359,7 +371,7 @@ class GameManager:
         if not self.traditional_game_page:
             # 如果传统模式游戏页面未加载，显示错误信息
             self.draw_background()
-            error_text = safe_render_text(self.info_font, "Traditional Game Module Loading Failed", RED)
+            error_text = safe_render_text(self.info_font, "传统游戏模块加载失败", RED)
             error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(error_text, error_rect)
             
@@ -401,7 +413,7 @@ class GameManager:
         if not self.easter_egg_page:
             # 如果彩蛋模式游戏页面未加载，显示错误信息
             self.draw_background()
-            error_text = safe_render_text(self.info_font, "Easter Egg Game Module Loading Failed", RED)
+            error_text = safe_render_text(self.info_font, "彩蛋游戏模块加载失败", RED)
             error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(error_text, error_rect)
             
@@ -445,7 +457,7 @@ class GameManager:
             if not AI_GAME_LOADED:
                 # 如果AI模式游戏页面未加载，显示错误信息
                 self.draw_background()
-                error_text = safe_render_text(self.info_font, "AI Game Module Loading Failed", RED)
+                error_text = safe_render_text(self.info_font, "AI游戏模块加载失败", RED)
                 error_rect = error_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
                 self.screen.blit(error_text, error_rect)
                 
@@ -461,7 +473,7 @@ class GameManager:
             # 开始加载AI游戏页面
             self._ai_game_loading = True
             self.draw_background()
-            loading_text = safe_render_text(self.info_font, "Loading AI Game Module...", YELLOW)
+            loading_text = safe_render_text(self.info_font, "正在加载AI游戏模块...", YELLOW)
             loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(loading_text, loading_rect)
             pygame.display.flip()
@@ -482,7 +494,7 @@ class GameManager:
             self.draw_background()
             
             # 显示加载文本
-            loading_text = safe_render_text(self.info_font, "Loading AI Game Module...", YELLOW)
+            loading_text = safe_render_text(self.info_font, "正在加载AI游戏模块...", YELLOW)
             loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(loading_text, loading_rect)
             
@@ -502,7 +514,7 @@ class GameManager:
             pygame.draw.rect(self.screen, GREEN, (progress_x, progress_y, progress_width_filled, progress_height))
             
             # 显示提示文本
-            tip_text = safe_render_text(self.small_font, "This may take a few seconds...", WHITE)
+            tip_text = safe_render_text(self.small_font, "这可能需要几秒钟...", WHITE)
             tip_rect = tip_text.get_rect(center=(SCREEN_WIDTH // 2, 380))
             self.screen.blit(tip_text, tip_rect)
             
@@ -520,7 +532,7 @@ class GameManager:
         if not hasattr(self, '_ai_mode_initialized') or not self._ai_mode_initialized:
             # 显示加载提示
             self.draw_background()
-            loading_text = safe_render_text(self.info_font, "Initializing AI Mode...", YELLOW)
+            loading_text = safe_render_text(self.info_font, "正在初始化AI模式...", YELLOW)
             loading_rect = loading_text.get_rect(center=(SCREEN_WIDTH // 2, 300))
             self.screen.blit(loading_text, loading_rect)
             pygame.display.flip()

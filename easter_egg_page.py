@@ -8,6 +8,7 @@ import math
 from plane_sprites import *
 from game_function import check_KEY, check_mouse
 from Tools import Music, Button as GameButton
+from font_manager import render_chinese_text, get_chinese_font
 
 class EasterEggPage:
     """彩蛋模式游戏页面类 - 特殊效果和有趣玩法"""
@@ -343,20 +344,17 @@ class EasterEggPage:
         else:
             color = (0, 0, 0)
         
-        text1 = f'LIFE: {self.life}'
-        text2 = f'SCORE: {self.score}'
-        text3 = f'EASTER EGG LEVEL: {self.easter_egg_level}'
-        text4 = f'SPECIAL: {"RAINBOW MODE!" if self.rainbow_mode and self.special_effect_timer > 0 else "Press SPACE for Easter Egg"}'
+        # 使用中文文本
+        text1 = f'生命: {self.life}'
+        text2 = f'分数: {self.score}'
+        text3 = f'彩蛋等级: {self.easter_egg_level}'
+        text4 = f'特效: {"彩虹模式!" if self.rainbow_mode and self.special_effect_timer > 0 else "按空格键触发彩蛋"}'
         
-        try:
-            cur_font = pygame.font.SysFont(None, 20)
-        except:
-            cur_font = pygame.font.Font(None, 20)
-            
-        text_fmt1 = cur_font.render(text1, 1, color)
-        text_fmt2 = cur_font.render(text2, 1, color)
-        text_fmt3 = cur_font.render(text3, 1, color)
-        text_fmt4 = cur_font.render(text4, 1, color)
+        # 使用字体管理器渲染中文文本
+        text_fmt1 = render_chinese_text(text1, 20, color)
+        text_fmt2 = render_chinese_text(text2, 20, color)
+        text_fmt3 = render_chinese_text(text3, 20, color)
+        text_fmt4 = render_chinese_text(text4, 20, color)
         
         self.screen.blit(text_fmt1, pos1)
         self.screen.blit(text_fmt2, pos2)

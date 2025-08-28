@@ -4,11 +4,16 @@ import os
 import random
 import math
 import colorsys
+import time
 
 # 导入游戏相关模块
 from plane_sprites import *
 from game_function import check_KEY, check_mouse
 from Tools import Music, Button as GameButton
+
+# 导入AI库
+from ai_game_rule_generator import AIGameRuleGenerator
+from ai_strategy_generator import AIGameStrategyGenerator
 
 # 注意：目前使用优化的简单AI控制器，强化学习控制器暂时未使用
 
@@ -304,69 +309,135 @@ class RandomKillEffect:
         return self.life_timer > 0
 
 class RandomItem:
-    """随机道具"""
+    """Random item - now more precious and rare"""
     
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.rect = pygame.Rect(x - 15, y - 15, 30, 30)
-        self.item_type = random.choice(['health', 'shield', 'speed', 'firepower', 'bomb'])
+        
+        # Item rarity system - more balanced distribution
+        item_weights = {
+            'health': 0.4,      # 40% - Health restore (common)
+            'shield': 0.25,     # 25% - Shield (uncommon)
+            'speed': 0.2,       # 20% - Speed boost (rare)
+            'firepower': 0.1,   # 10% - Firepower (epic)
+            'bomb': 0.05        # 5%  - Bomb (legendary)
+        }
+        
+        # 根据权重随机选择道具类型
+        self.item_type = random.choices(
+            list(item_weights.keys()), 
+            weights=list(item_weights.values())
+        )[0]
+        
         self.life_timer = 300  # 5秒生命周期
         self.animation_timer = 0
+        self.rarity_level = self._get_rarity_level()
         
-        # 根据道具类型设置颜色和效果
-        if self.item_type == 'health':
-            self.color = (255, 100, 100)  # 红色
-            self.symbol = '+'
-        elif self.item_type == 'shield':
-            self.color = (100, 100, 255)  # 蓝色
-            self.symbol = 'S'
-        elif self.item_type == 'speed':
-            self.color = (100, 255, 100)  # 绿色
-            self.symbol = '⚡'
-        elif self.item_type == 'firepower':
-            self.color = (255, 255, 100)  # 黄色
-            self.symbol = '🔥'
-        elif self.item_type == 'bomb':
-            self.color = (255, 50, 50)    # 深红色
-            self.symbol = '💣'
+        # 根据道具类型和稀有度设置颜色和效果
+        self._set_item_properties()
+    
+    def _get_rarity_level(self):
+        """Get item rarity level"""
+        rarity_map = {
+            'health': 'common',      # Common
+            'shield': 'uncommon',    # Uncommon
+            'speed': 'rare',         # Rare
+            'firepower': 'epic',     # Epic
+            'bomb': 'legendary'      # Legendary
+        }
+        return rarity_map.get(self.item_type, 'common')
+    
+    def _set_item_properties(self):
+        """Set properties based on item type and rarity"""
+        rarity_colors = {
+            'common': (255, 255, 255),      # White - Common
+            'uncommon': (0, 255, 0),        # Green - Uncommon
+            'rare': (0, 150, 255),          # Blue - Rare
+            'epic': (255, 0, 255),          # Purple - Epic
+            'legendary': (255, 215, 0)      # Gold - Legendary
+        }
+        
+        # Base colors
+        base_colors = {
+            'health': (255, 100, 100),      # Red
+            'shield': (100, 100, 255),      # Blue
+            'speed': (100, 255, 100),       # Green
+            'firepower': (255, 255, 100),   # Yellow
+            'bomb': (255, 50, 50)           # Dark Red
+        }
+        
+        # Mix rarity colors with base colors
+        rarity_color = rarity_colors[self.rarity_level]
+        base_color = base_colors[self.item_type]
+        self.color = tuple((r + b) // 2 for r, b in zip(rarity_color, base_color))
+        
+        # Item symbols
+        symbols = {
+            'health': '+',
+            'shield': 'S',
+            'speed': 'SPD',
+            'firepower': 'FIRE',
+            'bomb': 'BOMB'
+        }
+        self.symbol = symbols[self.item_type]
+        
+        # Rarity border color
+        self.border_color = rarity_colors[self.rarity_level]
     
     def update(self):
-        """更新道具"""
+        """Update item"""
         self.life_timer -= 1
         self.animation_timer += 1
         
-        # 闪烁效果
-        if self.life_timer < 60:  # 最后1秒闪烁
-            if self.animation_timer % 10 < 5:
-                self.color = (255, 255, 255)  # 白色闪烁
+        # Flash effect - adjust flash frequency based on rarity
+        if self.life_timer < 60:  # Flash in last 1 second
+            flash_speed = {
+                'common': 10,
+                'uncommon': 8,
+                'rare': 6,
+                'epic': 4,
+                'legendary': 2
+            }
+            speed = flash_speed.get(self.rarity_level, 10)
+            if self.animation_timer % speed < speed // 2:
+                self.color = self.border_color  # Rarity color flash
             else:
-                self._reset_color()
+                self._set_item_properties()  # Restore original color
     
     def _reset_color(self):
-        """重置颜色"""
-        if self.item_type == 'health':
-            self.color = (255, 100, 100)
-        elif self.item_type == 'shield':
-            self.color = (100, 100, 255)
-        elif self.item_type == 'speed':
-            self.color = (100, 255, 100)
-        elif self.item_type == 'firepower':
-            self.color = (255, 255, 100)
-        elif self.item_type == 'bomb':
-            self.color = (255, 50, 50)
+        """Reset color"""
+        self._set_item_properties()
     
     def draw(self, screen):
-        """绘制道具"""
-        # 绘制道具背景
-        pygame.draw.circle(screen, self.color, (self.x, self.y), 15)
-        pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), 15, 2)
+        """Draw item - enhanced visual effects"""
+        # Draw rarity glow
+        if self.rarity_level in ['rare', 'epic', 'legendary']:
+            glow_radius = 20
+            glow_alpha = 128
+            glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surface, (*self.border_color, glow_alpha), (glow_radius, glow_radius), glow_radius)
+            screen.blit(glow_surface, (self.x - glow_radius, self.y - glow_radius))
         
-        # 绘制道具符号
+        # Draw item background
+        pygame.draw.circle(screen, self.color, (self.x, self.y), 15)
+        
+        # Draw rarity border
+        border_width = 3 if self.rarity_level in ['epic', 'legendary'] else 2
+        pygame.draw.circle(screen, self.border_color, (self.x, self.y), 15, border_width)
+        
+        # Draw item symbol
         font = pygame.font.Font(None, 24)
         text = font.render(self.symbol, True, (0, 0, 0))
         text_rect = text.get_rect(center=(self.x, self.y))
         screen.blit(text, text_rect)
+        
+        # Draw rarity indicator
+        if self.rarity_level in ['epic', 'legendary']:
+            rarity_text = font.render('*', True, self.border_color)
+            rarity_rect = rarity_text.get_rect(center=(self.x, self.y - 25))
+            screen.blit(rarity_text, rarity_rect)
     
     def is_alive(self):
         """检查道具是否还活着"""
@@ -1101,8 +1172,31 @@ class AIGamePage:
         self.kill_effects = []  # 击杀效果列表
         self.items = []         # 道具列表
         self.bullet_effects = {}  # 子弹效果字典
-        self.item_spawn_timer = 0
-        self.item_spawn_interval = 300  # 每5秒生成一个道具
+        # 🎲 移除道具生成计时器相关变量 - 道具只在击杀敌机后掉落
+        # self.item_spawn_timer = 0
+        # self.item_spawn_interval = 300  # 每5秒生成一个道具
+        
+        # 🤖 AI规则和策略系统
+        self.rule_generator = AIGameRuleGenerator()
+        self.strategy_generator = AIGameStrategyGenerator()
+        self.game_rules = self.rule_generator.generate_game_session()
+        self.ai_strategy = self.strategy_generator.generate_initial_strategy()
+        
+        # AI系统状态
+        self.ai_difficulty = 1.0
+        self.frame_count = 0
+        self.game_start_time = time.time()
+        self.ai_performance_stats = {
+            'survival_time': 0.0,
+            'enemies_killed': 0,
+            'damage_taken': 0.0,
+            'power_ups_collected': 0,
+            'accuracy_rate': 0.0
+        }
+        
+        # 特殊事件系统
+        self.active_events = {}
+        self.event_effects = []
         
         # 设置背景音乐
         self.BGM = Music('./music/bgm.mp3')
@@ -1115,15 +1209,15 @@ class AIGamePage:
         # 创建玩家2的AI控制器 - 尝试使用训练好的模型
         try:
             from ai_controllers import create_ai_controller
-            print("尝试使用训练好的AI模型...")
+            print("[AI] Trying to use trained AI model...")
             self.ai_controller2 = create_ai_controller(
                 self.hero2, self.enemy_group, 
                 self.screen_width, self.screen_height, 
-                controller_type="hybrid"  # 混合模式：优先训练模型，备用简单AI
+                controller_type="hybrid"  # Hybrid mode: prioritize trained model, fallback to simple AI
             )
         except Exception as e:
-            print(f"训练模型加载失败: {e}")
-            print("使用优化的简单AI控制器")
+            print(f"[AI] Trained model loading failed: {e}")
+            print("[AI] Using optimized simple AI controller")
             from ai_controllers import OptimizedAIController
             self.ai_controller2 = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)
 
@@ -1178,6 +1272,10 @@ class AIGamePage:
         game_started = self.button.count_mouse % 2 != 0  # 游戏开始标志（点击后为奇数）
         game_paused = self.button.pause_game % 2 != 0    # 游戏暂停标志
         self.ai_controller2.update(game_started, game_paused)
+        
+        # 🤖 更新AI规则和策略系统
+        if game_started and not game_paused:
+            self._update_ai_systems()
 
         # 碰撞检测
         game_over = self.__check_collide()
@@ -1189,6 +1287,9 @@ class AIGamePage:
 
         # 显示生命和分数
         self.show_life()
+        
+        # 🤖 显示AI系统信息
+        self._show_ai_info()
 
         return "running"
 
@@ -1199,6 +1300,9 @@ class AIGamePage:
                 return True
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return True
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                # 重新生成AI规则
+                self._regenerate_ai_rules()
                 
             # 处理玩家1的键盘控制
             # 创建虚拟的hero3对象，避免None错误
@@ -1275,13 +1379,24 @@ class AIGamePage:
                     # 🎲 创建随机击杀效果
                     kill_effect = RandomKillEffect(enemy.rect.centerx, enemy.rect.centery)
                     self.kill_effects.append(kill_effect)
-                    print(f"🎯 玩家1击杀敌机，位置: ({enemy.rect.centerx}, {enemy.rect.centery})")
+                    print(f"[KILL] Player1 killed enemy at position: ({enemy.rect.centerx}, {enemy.rect.centery})")
                     
-                    # 🎲 随机道具掉落（20%概率）
-                    if random.random() < 0.2:
-                        item = RandomItem(enemy.rect.centerx, enemy.rect.centery)
-                        self.items.append(item)
-                        print(f"🎁 道具掉落: {item.item_type}")
+                    # 🎲 随机道具掉落（10%概率 - 降低道具产出）
+                    if random.random() < 0.1:
+                        # 🎯 根据击杀难度增加道具掉落概率
+                        # 如果敌机有特殊属性，增加掉落概率
+                        bonus_chance = 0.0
+                        if hasattr(enemy, 'health') and enemy.health > 1:
+                            bonus_chance += 0.05  # 高生命值敌机额外5%概率
+                        if hasattr(enemy, 'behavior') and enemy.behavior in ['chase', 'evade']:
+                            bonus_chance += 0.03  # 特殊行为敌机额外3%概率
+                        
+                        # 最终掉落概率
+                        final_chance = 0.1 + bonus_chance
+                        if random.random() < final_chance:
+                            item = RandomItem(enemy.rect.centerx, enemy.rect.centery)
+                            self.items.append(item)
+                            print(f"[ITEM] Item dropped: {item.item_type} (Kill difficulty bonus: +{bonus_chance:.2f})")
                     
                     # 将敌机的所有子弹复制到全局子弹组，并设置子弹的独立属性
                     for enemy_bullet in enemy.bullets:
@@ -1304,13 +1419,24 @@ class AIGamePage:
                     # 🎲 创建随机击杀效果
                     kill_effect = RandomKillEffect(enemy.rect.centerx, enemy.rect.centery)
                     self.kill_effects.append(kill_effect)
-                    print(f"🎯 AI击杀敌机，位置: ({enemy.rect.centerx}, {enemy.rect.centery})")
+                    print(f"[KILL] AI killed enemy at position: ({enemy.rect.centerx}, {enemy.rect.centery})")
                     
-                    # 🎲 随机道具掉落（20%概率）
-                    if random.random() < 0.2:
-                        item = RandomItem(enemy.rect.centerx, enemy.rect.centery)
-                        self.items.append(item)
-                        print(f"🎁 道具掉落: {item.item_type}")
+                    # 🎲 随机道具掉落（10%概率 - 降低道具产出）
+                    if random.random() < 0.1:
+                        # 🎯 根据击杀难度增加道具掉落概率
+                        # 如果敌机有特殊属性，增加掉落概率
+                        bonus_chance = 0.0
+                        if hasattr(enemy, 'health') and enemy.health > 1:
+                            bonus_chance += 0.05  # 高生命值敌机额外5%概率
+                        if hasattr(enemy, 'behavior') and enemy.behavior in ['chase', 'evade']:
+                            bonus_chance += 0.03  # 特殊行为敌机额外3%概率
+                        
+                        # 最终掉落概率
+                        final_chance = 0.1 + bonus_chance
+                        if random.random() < final_chance:
+                            item = RandomItem(enemy.rect.centerx, enemy.rect.centery)
+                            self.items.append(item)
+                            print(f"[ITEM] Item dropped: {item.item_type} (Kill difficulty bonus: +{bonus_chance:.2f})")
                     
                     # 将敌机的所有子弹复制到全局子弹组，并设置子弹的独立属性
                     for enemy_bullet in enemy.bullets:
@@ -1368,6 +1494,8 @@ class AIGamePage:
 
         # 当两个玩家都死亡，游戏结束
         if self.life1 == 0 and self.life2 == 0:
+            # 游戏结束时进化AI策略
+            self._evolve_ai_strategy()
             return True
         
         return False
@@ -1389,57 +1517,58 @@ class AIGamePage:
             if not item.is_alive():
                 self.items.remove(item)
         
-        # 道具生成计时器
-        self.item_spawn_timer += 1
-        if self.item_spawn_timer >= self.item_spawn_interval:
-            # 随机生成道具
-            if random.random() < 0.3:  # 30%概率生成
-                x = random.randint(100, self.screen_width - 100)
-                y = random.randint(100, self.screen_height - 100)
-                item = RandomItem(x, y)
-                self.items.append(item)
-                print(f"🎲 随机道具生成: {item.item_type} 位置: ({x}, {y})")
-            self.item_spawn_timer = 0
+        # Remove random item spawn timer - items only drop after killing enemies
+        # Item spawn timer
+        # self.item_spawn_timer += 1
+        # if self.item_spawn_timer >= self.item_spawn_interval:
+        #     # Random item generation
+        #     if random.random() < 0.3:  # 30% chance
+        #         x = random.randint(100, self.screen_width - 100)
+        #         y = random.randint(100, self.screen_height - 100)
+        #         item = RandomItem(x, y)
+        #         self.items.append(item)
+        #         print(f"[ITEM] Random item generated: {item.item_type} at position: ({x}, {y})")
+        #     self.item_spawn_timer = 0
         
-        # 检查道具收集
+        # Check item collection
         self._check_item_collection()
         
-        # 🎲 更新子弹效果
+        # Update bullet effects
         self._update_bullet_effects()
     
     def _draw_random_features(self):
-        """🎲 绘制随机功能"""
-        # 绘制击杀效果
+        """Draw random features"""
+        # Draw kill effects
         for effect in self.kill_effects:
             effect.draw(self.screen)
         
-        # 绘制道具
+        # Draw items
         for item in self.items:
             item.draw(self.screen)
         
-        # 绘制子弹效果
+        # Draw bullet effects
         for bullet_id, effect in self.bullet_effects.items():
             if hasattr(effect, 'draw'):
                 effect.draw(self.screen)
     
     def _check_item_collection(self):
-        """🎲 检查道具收集"""
+        """Check item collection"""
         for item in self.items[:]:
-            # 检查玩家1收集道具
+            # Check if player1 collects item
             if self.hero1.rect.colliderect(item.rect):
                 self._apply_item_effect(item, 1)
                 self.items.remove(item)
-                print(f"🎁 玩家1收集道具: {item.item_type}")
+                print(f"[ITEM] Player1 collected item: {item.item_type}")
             
-            # 检查玩家2收集道具
+            # Check if player2 collects item
             elif self.hero2.rect.colliderect(item.rect):
                 self._apply_item_effect(item, 2)
                 self.items.remove(item)
-                print(f"🎁 AI收集道具: {item.item_type}")
+                print(f"[ITEM] AI collected item: {item.item_type}")
     
     def _apply_item_effect(self, item, player_id):
-        """🎲 应用道具效果"""
-        # 🎉 创建道具收集效果
+        """Apply item effects"""
+        # Create item collection effect
         if player_id == 1:
             effect_pos = (self.hero1.rect.centerx, self.hero1.rect.centery)
         else:
@@ -1451,39 +1580,39 @@ class AIGamePage:
         if item.item_type == 'health':
             if player_id == 1 and self.life1 < 5:
                 self.life1 = min(5, self.life1 + 1)
-                print(f"❤️ 玩家1生命值恢复: {self.life1}")
+                print(f"[HEALTH] Player1 health restored: {self.life1}")
             elif player_id == 2 and self.life2 < 5:
                 self.life2 = min(5, self.life2 + 1)
-                print(f"❤️ AI生命值恢复: {self.life2}")
+                print(f"[HEALTH] AI health restored: {self.life2}")
         
         elif item.item_type == 'shield':
-            print(f"🛡️ 玩家{player_id}获得护盾保护")
-            # 这里可以添加护盾逻辑
+            print(f"[SHIELD] Player{player_id} gained shield protection")
+            # Add shield logic here
         
         elif item.item_type == 'speed':
-            print(f"⚡ 玩家{player_id}速度提升")
-            # 这里可以添加速度提升逻辑
+            print(f"[SPEED] Player{player_id} speed increased")
+            # Add speed boost logic here
         
         elif item.item_type == 'firepower':
-            print(f"🔥 玩家{player_id}火力增强")
-            # 这里可以添加火力增强逻辑
+            print(f"[FIREPOWER] Player{player_id} firepower enhanced")
+            # Add firepower boost logic here
         
         elif item.item_type == 'bomb':
-            print(f"💣 玩家{player_id}获得炸弹")
-            # 这里可以添加炸弹逻辑
+            print(f"[BOMB] Player{player_id} gained bomb")
+            # Add bomb logic here
     
     def _update_bullet_effects(self):
-        """🎲 更新子弹效果"""
-        # 清理已销毁的子弹效果
+        """Update bullet effects"""
+        # Clean up destroyed bullet effects
         for bullet_id in list(self.bullet_effects.keys()):
             bullet_exists = False
             
-            # 检查子弹是否还存在
+            # Check if bullet still exists
             for hero in [self.hero1, self.hero2]:
                 for bullet in hero.bullets:
                     if id(bullet) == bullet_id:
                         bullet_exists = True
-                        # 更新子弹效果
+                        # Update bullet effect
                         if bullet_id in self.bullet_effects:
                             self.bullet_effects[bullet_id].update()
                         break
@@ -1618,4 +1747,157 @@ class AIGamePage:
         self.hero2.time_count = 1
         self.hero_group2 = pygame.sprite.Group(self.hero2)
     
+    def _update_ai_systems(self):
+        """更新AI规则和策略系统"""
+        self.frame_count += 1
+        
+        # 更新AI性能统计
+        self.ai_performance_stats['survival_time'] = time.time() - self.game_start_time
+        self.ai_performance_stats['enemies_killed'] = self.ai_kills
+        # 统计已收集的道具（通过检查道具是否还活着来估算）
+        collected_count = len([item for item in self.items if not item.is_alive()])
+        self.ai_performance_stats['power_ups_collected'] = collected_count
+        
+        # 根据AI规则生成敌机
+        new_enemies = self.rule_generator.get_dynamic_enemy_spawn(
+            self.frame_count, 
+            len(self.enemy_group)
+        )
+        
+        for enemy_data in new_enemies:
+            # 创建新的敌机
+            new_enemy = Enemy()
+            new_enemy.rect.x = enemy_data['x']
+            new_enemy.rect.y = enemy_data['y']
+            new_enemy.speed = enemy_data['speed']
+            # 添加自定义属性
+            new_enemy.health = enemy_data.get('health', 1)
+            new_enemy.behavior = enemy_data.get('behavior', 'straight')
+            new_enemy.ai_behavior = enemy_data.get('behavior', 'straight')  # 用于AI控制的属性
+            self.enemy_group.add(new_enemy)
+        
+        # 应用特殊事件
+        events = self.rule_generator.apply_special_event(
+            self.frame_count,
+            self.score1 + self.score2,
+            len(self.enemy_group)
+        )
+        
+        self.active_events = events
+        
+        # 更新AI难度
+        player_performance = self._calculate_player_performance()
+        self.ai_difficulty = self.rule_generator.get_ai_difficulty_adjustment(
+            player_performance
+        )
+        
+        # 应用AI策略到AI控制器
+        self._apply_ai_strategy()
+    
+    def _calculate_player_performance(self) -> float:
+        """计算玩家表现"""
+        # 计算准确率（简化处理）
+        total_shots = self.score1 + self.ai_kills
+        if total_shots == 0:
+            accuracy = 0.0
+        else:
+            accuracy = (self.score1 + self.ai_kills) / total_shots
+        
+        # 综合性能评分 (0-1)
+        survival_score = min(1.0, self.ai_performance_stats['survival_time'] / 60.0)
+        kill_score = min(1.0, self.ai_performance_stats['enemies_killed'] / 20.0)
+        accuracy_score = accuracy
+        health_score = (self.life1 + self.life2) / 6.0  # 总生命值比例
+        
+        performance = (survival_score * 0.3 + kill_score * 0.3 + 
+                      accuracy_score * 0.2 + health_score * 0.2)
+        
+        return performance
+    
+    def _apply_ai_strategy(self):
+        """应用AI策略到AI控制器"""
+        if hasattr(self, 'ai_controller2') and hasattr(self.ai_controller2, 'apply_strategy'):
+            # 如果AI控制器支持策略应用
+            self.ai_controller2.apply_strategy(self.ai_strategy)
+        else:
+            # 否则通过调整参数来应用策略
+            if hasattr(self.ai_controller2, 'aggression'):
+                self.ai_controller2.aggression = self.ai_strategy['aggression']
+            if hasattr(self.ai_controller2, 'defense'):
+                self.ai_controller2.defense = self.ai_strategy['defense']
+            if hasattr(self.ai_controller2, 'speed'):
+                self.ai_controller2.speed = self.ai_strategy['speed']
+    
+    def _regenerate_ai_rules(self):
+        """Regenerate AI rules and strategies"""
+        print("\n[SYSTEM] Regenerating AI game rules...")
+        self.game_rules = self.rule_generator.generate_game_session()
+        self.ai_strategy = self.strategy_generator.generate_initial_strategy()
+        
+        # Reset AI system state
+        self.frame_count = 0
+        self.game_start_time = time.time()
+        self.ai_performance_stats = {
+            'survival_time': 0.0,
+            'enemies_killed': 0,
+            'damage_taken': 0.0,
+            'power_ups_collected': 0,
+            'accuracy_rate': 0.0
+        }
+        
+        # Clear special events
+        self.active_events.clear()
+        self.event_effects.clear()
+        
+        print("[SYSTEM] AI rules regeneration completed!")
+    
+    def _show_ai_info(self):
+        """显示AI系统信息"""
+        # 在屏幕右上角显示AI信息
+        ai_info_text = [
+            f"AI难度: {self.ai_difficulty:.2f}",
+            f"策略: {self.ai_strategy.get('behavior_patterns', {}).get('combat_style', 'Unknown')}",
+            f"攻击性: {self.ai_strategy.get('aggression', 0):.2f}",
+            f"防御性: {self.ai_strategy.get('defense', 0):.2f}"
+        ]
+        
+        try:
+            font = pygame.font.Font(None, 18)
+            for i, text in enumerate(ai_info_text):
+                text_surface = font.render(text, True, (255, 255, 255))
+                self.screen.blit(text_surface, (self.screen_width - 200, 10 + i * 20))
+        except:
+            pass
+        
+        # 显示特殊事件
+        if self.active_events:
+            event_text = f"特殊事件: {', '.join(self.active_events.keys())}"
+            try:
+                event_surface = font.render(event_text, True, (255, 255, 0))
+                self.screen.blit(event_surface, (self.screen_width - 300, 80))
+            except:
+                pass
+    
+    def _evolve_ai_strategy(self):
+        """Evolve AI strategy when game ends"""
+        try:
+            print("\n[GAME] Game Over!")
+            
+            # Calculate final performance score
+            final_performance = self._calculate_player_performance()
+            print(f"[GAME] Final performance score: {final_performance:.3f}")
+            
+            # Evolve AI strategy
+            if hasattr(self, 'strategy_generator'):
+                print("[SYSTEM] AI strategy evolving...")
+                new_strategy = self.strategy_generator.evolve_strategy(
+                    self.ai_strategy, final_performance
+                )
+                self.ai_strategy = new_strategy
+                print("[SYSTEM] AI strategy evolution completed!")
+                print(f"[SYSTEM] New strategy ID: {new_strategy.get('strategy_id', 'Unknown')}")
+                print(f"[SYSTEM] Generation: {new_strategy.get('generation', 1)}")
+                print(f"[SYSTEM] Fitness score: {new_strategy.get('fitness_score', 0):.3f}")
+        except Exception as e:
+            print(f"[ERROR] AI strategy evolution failed: {e}")
 

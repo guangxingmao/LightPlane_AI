@@ -60,6 +60,15 @@ class TrainedAIController:
         self.last_position = None  # 记录上次位置
         self.position_change_threshold = 2  # 位置变化阈值
         self.action_stability = 0  # 动作稳定性计数器
+        
+        # 决策参数
+        self.decision_interval = 30  # 每30帧做一次决策
+        self.last_decision_time = 0
+        
+        # 策略参数
+        self.aggression = 0.5
+        self.defense = 0.5
+        self.speed = 3
     
     def _load_model(self):
         """加载训练好的模型"""
@@ -226,6 +235,35 @@ class TrainedAIController:
                     self.action_cooldown = 5  # 射击冷却
         
         self.last_action = action
+    
+    def get_ai_info(self):
+        """获取AI信息"""
+        return {
+            'controller_type': '训练AI控制器',
+            'ai_model_loaded': self.use_trained_model,
+            'model_path': self.model_path,
+            'action_stability': self.action_stability,
+            'last_action': self.last_action,
+            'moving': False,
+            'decision_interval': self.decision_interval,
+            'move_speed': self.move_speed
+        }
+    
+    def apply_strategy(self, strategy):
+        """应用策略"""
+        if 'aggression' in strategy:
+            self.aggression = strategy['aggression']
+        if 'defense' in strategy:
+            self.defense = strategy['defense']
+        if 'speed' in strategy:
+            self.move_speed = strategy['speed']
+    
+    def reset(self):
+        """重置AI状态"""
+        self.action_stability = 0
+        self.last_action = 0
+        self.action_cooldown = 0
+        self.last_position = None
 
 
 class HybridAIController:
@@ -258,6 +296,29 @@ class HybridAIController:
         else:
             # 使用简单AI
             self.simple_ai.update(game_started, game_paused)
+    
+    def get_ai_info(self):
+        """获取AI信息"""
+        if self.use_trained_model:
+            return self.trained_ai.get_ai_info()
+        else:
+            return self.simple_ai.get_ai_info()
+    
+    def apply_strategy(self, strategy):
+        """应用策略"""
+        if self.use_trained_model:
+            if hasattr(self.trained_ai, 'apply_strategy'):
+                self.trained_ai.apply_strategy(strategy)
+        if hasattr(self.simple_ai, 'apply_strategy'):
+            self.simple_ai.apply_strategy(strategy)
+    
+    def reset(self):
+        """重置AI状态"""
+        if self.use_trained_model:
+            if hasattr(self.trained_ai, 'reset'):
+                self.trained_ai.reset()
+        if hasattr(self.simple_ai, 'reset'):
+            self.simple_ai.reset()
 
 
 # 为了向后兼容，创建一个工厂函数

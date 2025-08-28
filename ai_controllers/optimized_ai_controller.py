@@ -263,3 +263,36 @@ class OptimizedAIController:
         """自动射击 - 现在由事件系统处理，这里保留方法但不执行射击"""
         # 射击现在由AI_FIRE_EVENT事件自动处理
         pass
+    
+    def get_ai_info(self):
+        """获取AI信息"""
+        return {
+            'controller_type': '优化AI控制器',
+            'ai_model_loaded': False,
+            'model_path': None,
+            'action_stability': 0,
+            'last_action': 0,
+            'moving': self.moving,
+            'decision_interval': 0,
+            'move_speed': self.speed
+        }
+    
+    def apply_strategy(self, strategy):
+        """应用策略"""
+        if 'aggression' in strategy:
+            self.aggression = strategy['aggression']
+        if 'defense' in strategy:
+            self.defense = strategy['defense']
+        if 'speed' in strategy:
+            self.speed = strategy['speed']
+    
+    def reset(self):
+        """重置AI状态"""
+        self.aggression = 0.5
+        self.defense = 0.5
+        self.speed = 3
+        self.shoot_cooldown = 0
+        self.moving = False
+        self.target_x = self.hero.rect.centerx
+        self.target_y = self.hero.rect.centery
+        self.last_position = None

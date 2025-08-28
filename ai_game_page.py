@@ -1182,6 +1182,9 @@ class AIGamePage:
         self.game_rules = self.rule_generator.generate_game_session()
         self.ai_strategy = self.strategy_generator.generate_initial_strategy()
         
+        # 应用AI策略到决策控制器
+        self._apply_ai_strategy()
+        
         # AI系统状态
         self.ai_difficulty = 1.0
         self.frame_count = 0
@@ -1206,20 +1209,54 @@ class AIGamePage:
         # 调用私有方法创建精灵组
         self.__creat_sprites()
         
-        # 创建玩家2的AI控制器 - 尝试使用训练好的模型
+        # 创建双重AI系统
+        print("[AI] 正在加载双重AI系统...")
+        
+        # 1. AI战机控制器 - 控制飞机飞行和射击
         try:
             from ai_controllers import create_ai_controller
-            print("[AI] Trying to use trained AI model...")
-            self.ai_controller2 = create_ai_controller(
+            print("[AI] 正在加载AI战机控制器...")
+            self.ai_plane_controller = create_ai_controller(
                 self.hero2, self.enemy_group, 
                 self.screen_width, self.screen_height, 
-                controller_type="hybrid"  # Hybrid mode: prioritize trained model, fallback to simple AI
+                controller_type="hybrid"  # 使用训练好的飞机控制模型
             )
+            print("[AI] ✅ AI战机控制器加载成功!")
         except Exception as e:
-            print(f"[AI] Trained model loading failed: {e}")
-            print("[AI] Using optimized simple AI controller")
+            print(f"[AI] ❌ AI战机控制器加载失败: {e}")
+            print("[AI] 使用规则AI控制器作为备用")
             from ai_controllers import OptimizedAIController
-            self.ai_controller2 = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)
+            self.ai_plane_controller = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)
+        
+        # 2. AI决策控制器 - 控制游戏策略和规则
+        try:
+            from ai_controllers import create_ai_decision_controller
+            print("[AI] 正在加载AI决策控制器...")
+            self.ai_decision_controller = create_ai_decision_controller(
+                self.hero2, self.enemy_group, 
+                self.screen_width, self.screen_height,
+                model_path="./models/ai_decision_ppo/final"
+            )
+            
+            # 获取AI决策信息
+            ai_decision_info = self.ai_decision_controller.get_ai_info()
+            print(f"[AI] ✅ AI决策控制器加载成功!")
+            print(f"[AI] 决策控制器类型: {ai_decision_info['controller_type']}")
+            print(f"[AI] AI决策模型加载: {ai_decision_info['ai_model_loaded']}")
+            print(f"[AI] 决策模型路径: {ai_decision_info['model_path']}")
+            
+        except Exception as e:
+            print(f"[AI] ❌ AI决策控制器加载失败: {e}")
+            print("[AI] 使用规则AI控制器作为备用")
+            from ai_controllers import OptimizedAIController
+            self.ai_decision_controller = OptimizedAIController(self.hero2, self.enemy_group, self.screen_width, self.screen_height, False)
+        
+        # 为了兼容性，保留原有的ai_controller2引用
+        self.ai_controller2 = self.ai_plane_controller
+        
+        print(f"[AI] 🎯 双重AI系统初始化完成!")
+        print(f"[AI]   战机控制: {type(self.ai_plane_controller).__name__}")
+        print(f"[AI]   决策控制: {type(self.ai_decision_controller).__name__}")
 
     def start_game(self):
         '''开始游戏'''
@@ -1236,11 +1273,18 @@ class AIGamePage:
             if should_quit:
                 return "quit"
 
-            # 3. 更新AI（只更新玩家2的AI）
+            # 3. 更新双重AI系统
             # 检查游戏是否开始和是否暂停
             game_started = self.button.count_mouse % 2 != 0  # 游戏开始标志（点击后为奇数）
             game_paused = self.button.pause_game % 2 != 0    # 游戏暂停标志
-            self.ai_controller2.update(game_started, game_paused)
+            
+            # 更新AI战机控制器 - 控制飞机移动和射击
+            if hasattr(self, 'ai_plane_controller'):
+                self.ai_plane_controller.update(game_started, game_paused)
+            
+            # 更新AI决策控制器 - 控制游戏策略
+            if hasattr(self, 'ai_decision_controller'):
+                self.ai_decision_controller.update(game_started, game_paused)
 
             # 4. 碰撞检测
             game_over = self.__check_collide()
@@ -1267,11 +1311,18 @@ class AIGamePage:
         if should_quit:
             return "quit"
 
-        # 更新AI（只更新玩家2的AI）
+        # 更新双重AI系统
         # 检查游戏是否开始和是否暂停
         game_started = self.button.count_mouse % 2 != 0  # 游戏开始标志（点击后为奇数）
         game_paused = self.button.pause_game % 2 != 0    # 游戏暂停标志
-        self.ai_controller2.update(game_started, game_paused)
+        
+        # 更新AI战机控制器 - 控制飞机移动和射击
+        if hasattr(self, 'ai_plane_controller'):
+            self.ai_plane_controller.update(game_started, game_paused)
+        
+        # 更新AI决策控制器 - 控制游戏策略
+        if hasattr(self, 'ai_decision_controller'):
+            self.ai_decision_controller.update(game_started, game_paused)
         
         # 🤖 更新AI规则和策略系统
         if game_started and not game_paused:
@@ -1758,6 +1809,30 @@ class AIGamePage:
         collected_count = len([item for item in self.items if not item.is_alive()])
         self.ai_performance_stats['power_ups_collected'] = collected_count
         
+        # 监控双重AI系统状态
+        if self.frame_count % 100 == 0:  # 每100帧打印一次状态
+            print(f"[AI] 双重AI系统状态监控 - 帧数: {self.frame_count}")
+            
+            # 监控AI战机控制器
+            if hasattr(self, 'ai_plane_controller') and hasattr(self.ai_plane_controller, 'get_ai_info'):
+                try:
+                    plane_info = self.ai_plane_controller.get_ai_info()
+                    print(f"    🛩️ 战机AI: 动作稳定性={plane_info.get('action_stability', 0)}, "
+                          f"最后动作={plane_info.get('last_action', 0)}, "
+                          f"移动状态={plane_info.get('moving', False)}")
+                except Exception as e:
+                    print(f"    ❌ 战机AI状态监控失败: {e}")
+            
+            # 监控AI决策控制器
+            if hasattr(self, 'ai_decision_controller') and hasattr(self.ai_decision_controller, 'get_ai_info'):
+                try:
+                    decision_info = self.ai_decision_controller.get_ai_info()
+                    print(f"    🧠 决策AI: 动作稳定性={decision_info.get('action_stability', 0)}, "
+                          f"最后动作={decision_info.get('last_action', 0)}, "
+                          f"移动状态={decision_info.get('moving', False)}")
+                except Exception as e:
+                    print(f"    ❌ 决策AI状态监控失败: {e}")
+        
         # 根据AI规则生成敌机
         new_enemies = self.rule_generator.get_dynamic_enemy_spawn(
             self.frame_count, 
@@ -1815,18 +1890,30 @@ class AIGamePage:
         return performance
     
     def _apply_ai_strategy(self):
-        """应用AI策略到AI控制器"""
-        if hasattr(self, 'ai_controller2') and hasattr(self.ai_controller2, 'apply_strategy'):
-            # 如果AI控制器支持策略应用
-            self.ai_controller2.apply_strategy(self.ai_strategy)
+        """应用AI策略到双重AI系统"""
+        print(f"[AI] 正在应用AI策略到双重AI系统...")
+        
+        # 1. 应用策略到AI战机控制器
+        if hasattr(self, 'ai_plane_controller') and hasattr(self.ai_plane_controller, 'apply_strategy'):
+            try:
+                self.ai_plane_controller.apply_strategy(self.ai_strategy)
+                print(f"[AI] ✅ AI策略已应用到战机控制器")
+            except Exception as e:
+                print(f"[AI] ❌ 战机控制器策略应用失败: {e}")
         else:
-            # 否则通过调整参数来应用策略
-            if hasattr(self.ai_controller2, 'aggression'):
-                self.ai_controller2.aggression = self.ai_strategy['aggression']
-            if hasattr(self.ai_controller2, 'defense'):
-                self.ai_controller2.defense = self.ai_strategy['defense']
-            if hasattr(self.ai_controller2, 'speed'):
-                self.ai_controller2.speed = self.ai_strategy['speed']
+            print(f"[AI] ⚠️ 战机控制器不支持策略应用")
+        
+        # 2. 应用策略到AI决策控制器
+        if hasattr(self, 'ai_decision_controller') and hasattr(self.ai_decision_controller, 'apply_strategy'):
+            try:
+                self.ai_decision_controller.apply_strategy(self.ai_strategy)
+                print(f"[AI] ✅ AI策略已应用到决策控制器")
+            except Exception as e:
+                print(f"[AI] ❌ 决策控制器策略应用失败: {e}")
+        else:
+            print(f"[AI] ⚠️ 决策控制器不支持策略应用")
+        
+        print(f"[AI] 🎯 双重AI策略应用完成!")
     
     def _regenerate_ai_rules(self):
         """Regenerate AI rules and strategies"""
@@ -1853,6 +1940,22 @@ class AIGamePage:
     
     def _show_ai_info(self):
         """显示AI系统信息"""
+        # 获取AI战机控制器信息
+        ai_plane_info = {}
+        if hasattr(self, 'ai_plane_controller') and hasattr(self.ai_plane_controller, 'get_ai_info'):
+            try:
+                ai_plane_info = self.ai_plane_controller.get_ai_info()
+            except:
+                pass
+        
+        # 获取AI决策控制器信息
+        ai_decision_info = {}
+        if hasattr(self, 'ai_decision_controller') and hasattr(self.ai_decision_controller, 'get_ai_info'):
+            try:
+                ai_decision_info = self.ai_decision_controller.get_ai_info()
+            except:
+                pass
+        
         # 在屏幕右上角显示AI信息
         ai_info_text = [
             f"AI难度: {self.ai_difficulty:.2f}",
@@ -1860,6 +1963,21 @@ class AIGamePage:
             f"攻击性: {self.ai_strategy.get('aggression', 0):.2f}",
             f"防御性: {self.ai_strategy.get('defense', 0):.2f}"
         ]
+        
+        # 添加AI战机控制器信息
+        if ai_plane_info:
+            ai_info_text.extend([
+                f"战机AI: {ai_plane_info.get('controller_type', 'Unknown')}",
+                f"战机模型: {'已加载' if ai_plane_info.get('ai_model_loaded', False) else '未加载'}"
+            ])
+        
+        # 添加AI决策控制器信息
+        if ai_decision_info:
+            ai_info_text.extend([
+                f"决策AI: {ai_decision_info.get('controller_type', 'Unknown')}",
+                f"决策模型: {'已加载' if ai_decision_info.get('ai_model_loaded', False) else '未加载'}",
+                f"决策间隔: {ai_decision_info.get('decision_interval', 0)}帧"
+            ])
         
         try:
             # 使用font_manager来正确渲染中文

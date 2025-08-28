@@ -538,8 +538,10 @@ class GameManager:
             pygame.display.flip()
             
             try:
-                self.ai_game_page.reset_game()
+                # 重新创建AI游戏页面来初始化
+                self.ai_game_page = AIGamePage(self.screen)
                 self._ai_mode_initialized = True
+                print("✅ AI模式重新初始化成功")
             except Exception as e:
                 print(f"AI模式初始化失败: {e}")
                 # 初始化失败，返回主菜单
@@ -547,9 +549,8 @@ class GameManager:
                 self.change_page(PageState.MAIN_MENU)
                 return True
         
-        # 如果这是第一次进入AI模式或从其他页面返回，重置游戏状态
+        # 如果这是第一次进入AI模式或从其他页面返回，标记为需要初始化
         if not hasattr(self, '_ai_mode_initialized') or not self._ai_mode_initialized:
-            self.ai_game_page.reset_game()
             self._ai_mode_initialized = True
         
         # 运行AI模式游戏的一帧

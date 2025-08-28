@@ -1862,20 +1862,23 @@ class AIGamePage:
         ]
         
         try:
-            font = pygame.font.Font(None, 18)
+            # 使用font_manager来正确渲染中文
+            from font_manager import render_chinese_text
             for i, text in enumerate(ai_info_text):
-                text_surface = font.render(text, True, (255, 255, 255))
+                text_surface = render_chinese_text(text, size=18, color=(255, 255, 255))
                 self.screen.blit(text_surface, (self.screen_width - 200, 10 + i * 20))
-        except:
+        except Exception as e:
+            print(f"[ERROR] AI info text rendering failed: {e}")
             pass
         
         # 显示特殊事件
         if self.active_events:
             event_text = f"特殊事件: {', '.join(self.active_events.keys())}"
             try:
-                event_surface = font.render(event_text, True, (255, 255, 0))
+                event_surface = render_chinese_text(event_text, size=18, color=(255, 255, 0))
                 self.screen.blit(event_surface, (self.screen_width - 300, 80))
-            except:
+            except Exception as e:
+                print(f"[ERROR] Event text rendering failed: {e}")
                 pass
     
     def _evolve_ai_strategy(self):

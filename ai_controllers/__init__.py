@@ -13,6 +13,10 @@ from .optimized_ai_controller import OptimizedAIController
 from .plane_fighter_env import PlaneFighterEnv
 from .ai_decision_controller import AIDecisionController, create_ai_decision_controller
 from .ai_game_env import AIGameEnvironment
+from .game_strategy_controller import GameStrategyController, create_game_strategy_controller
+from .game_strategy_env import GameStrategyEnvironment
+from .integrated_plane_env import IntegratedPlaneFighterEnv
+from .integrated_ai_controller import IntegratedAIController, create_integrated_ai_controller
 
 __all__ = [
     'TrainedAIController',
@@ -22,7 +26,13 @@ __all__ = [
     'PlaneFighterEnv',
     'AIDecisionController',
     'create_ai_decision_controller',
-    'AIGameEnvironment'
+    'AIGameEnvironment',
+    'GameStrategyController',
+    'create_game_strategy_controller',
+    'GameStrategyEnvironment',
+    'IntegratedPlaneFighterEnv',
+    'IntegratedAIController',
+    'create_integrated_ai_controller'
 ]
 
 __version__ = '2.0.0'
